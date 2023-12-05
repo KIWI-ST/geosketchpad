@@ -11,4 +11,6 @@ interface IRenderer {
     render(framestamp: number, camera: PerspectiveCamera): void;
 }
 
-export { IRenderer }
+export {
+    type IRenderer
+}

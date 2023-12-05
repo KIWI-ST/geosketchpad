@@ -28,4 +28,6 @@ interface IRendererOS<T> extends IRenderer {
     getCanvasImage?(): ImageBitmap;
 }
 
-export { IRendererOS }
+export {
+    type IRendererOS
+}

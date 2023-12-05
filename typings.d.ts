@@ -1,4 +1,5 @@
-declare module "*.txt" {
-    const value: string;
-    export = value;
+declare module "*?raw"
+{
+    const content:string;
+    export default content;
 }

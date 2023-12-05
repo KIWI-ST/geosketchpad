@@ -5,12 +5,9 @@ const nodeResolve = require('@rollup/plugin-node-resolve').nodeResolve;
 const rollupTypescript = require('@rollup/plugin-typescript');
 const commonjs = require('@rollup/plugin-commonjs');
 
-//gulp
-const gulp = require('gulp');
 const fs = require('fs');
+const gulp = require('gulp');
 const path = require('path');
-const Bundler = require('parcel-bundler');
-const parcel = require('parcel');
 
 //功能函数：清空文件夹
 function dleDir(path) {
@@ -48,19 +45,9 @@ gulp.task('worker', async function () {
             });
             await bundle.write({
                 file: './dist/worker/' + df + '.txt',
-                format: 'umd'
-                // sourcemap:true
+                format: 'umd',
+                sourcemap:true,
             });
         });
     });
 });
-
-//功能：全功能打包
-gulp.task('build', async function () {
-    const bd = new parcel('./src/index.ts', { outDir: './dist/bundle/' });
-    await bd.bundle();
-    await bd.stop();
-});
-
-//功能：整包发布
-gulp.task('release', gulp.series(['worker', 'build']));

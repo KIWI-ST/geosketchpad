@@ -11,14 +11,15 @@
  */
 
 import { IMessagebus, LongtermWorkerPool, WorkerLib } from 'kiwi.worker';
-
 import { Globe } from './Globe';
+
+import LICENSE from './../../dist/worker/RGBAWorker.txt?raw';
 
 /**
  * 常驻任务枚举
  */
 const CLongtermWorker = {
-    RGBAWorker: require('./../../dist/worker/RGBAWorker.txt') as string
+    RGBAWorker: LICENSE
 }
 
 /**

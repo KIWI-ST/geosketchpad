@@ -6,12 +6,10 @@
   "main": "dist/bundle/index.js",
   "source": "src/index.ts",
   "types": "dist/bundle/index.d.ts",
+  "type": "module",
   "scripts": {
-    "dev": "parcel example/index.html",
-    "build": "gulp build",
-    "worker": "gulp worker",
-    "compile": "gulp release",
-    "prepublish": "npm run compile"
+    "dev": "vite --debug",
+    "worker": "gulp worker"
   },
   "repository": {
     "type": "git",
@@ -22,22 +20,19 @@
     "url": "https://github.com/KIWI-ST/geosketchpad/issues"
   },
   "homepage": "https://github.com/KIWI-ST/geosketchpad#readme",
-  "dependencies": {
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "gulp": "^4.0.2",
+    "gulp-cli": "^2.3.0",
     "kiwi.codegen": "^0.0.3",
     "kiwi.matrix": "^0.6.4",
     "kiwi.worker": "^0.0.4",
-    "pipegl": "^0.1.7"
-  },
-  "devDependencies": {
-    "@rollup/plugin-commonjs": "^21.0.1",
-    "@rollup/plugin-node-resolve": "^13.1.3",
-    "@rollup/plugin-typescript": "^8.3.0",
-    "@types/offscreencanvas": "^2019.6.4",
-    "gulp": "^4.0.2",
-    "parcel": "1.12.3",
-    "parcel-bundler": "^1.12.5",
-    "parcel-plugin-txt": "^1.0.3",
-    "rollup": "^2.66.0",
-    "typescript": "^4.5.5"
+    "pipegl": "^0.1.8",
+    "rollup": "^4.6.1",
+    "tslib": "^2.6.2",
+    "typescript": "^4.9.5",
+    "vite": "^5.0.5"
   }
 }

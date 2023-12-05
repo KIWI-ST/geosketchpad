@@ -76,10 +76,10 @@ class Sketchpad<T extends TSketchpadDataSchema> extends Renderable {
     public get Renderer(): IRendererOS<T> {
         return this.renderer;
     }
-    
+
 }
 
 export {
-    TSketchpadDataSchema,
+    type TSketchpadDataSchema,
     Sketchpad
 }

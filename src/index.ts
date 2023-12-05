@@ -1,7 +1,7 @@
 //globe
 export { Globe } from './globe/Globe';
 //auxtool
-import './globe/auxiliar/Globe.auxiliar.Cursor';
+import './globe/auxiliar/Globe.Auxiliar.Cursor';
 //expand
 import './globe/Globe.Camera';
 import './globe/Globe.Handler';
