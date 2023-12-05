@@ -122,6 +122,6 @@ class TileLayer extends Sketchpad<TileLayerDataSchema>{
 }
 
 export {
-    TileLayerDataSchema,
+    type TileLayerDataSchema,
     TileLayer,
 }
