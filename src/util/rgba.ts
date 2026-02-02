@@ -14,7 +14,7 @@ const rgba = (uri: string, key: string = ``): Promise<{ buf: Uint8Array, w: numb
                 CANVAS.height = devicePixelRatio * h;
                 CANVAS.style.width = `${w}px`;
                 CANVAS.style.height = `${h}px`;
-                const CTX = CANVAS.getContext('2d');
+                const CTX = CANVAS.getContext('2d')!;
                 CTX.drawImage(bitmap, 0, 0);
                 const uc8arr = CTX.getImageData(0, 0, w, h).data;
                 const buf = new Uint8Array(uc8arr);

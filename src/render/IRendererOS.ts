@@ -4,8 +4,7 @@
  * 1. 为Sketchpad准备，所有绘制到sketchpad的对象均由离屏渲染完成
  * 2. 为webworker准备，在webworer里使用离屏渲染绘制纹理，将结果传递到主线程贴图
  */
-
-import { IRenderer } from "./IRenderer";
+import type { IRenderer } from "./IRenderer";
 
 /**
  * off-screen renderer

@@ -79,4 +79,6 @@ const createNormals = (elements: number[][], positions: number[][]): number[][] 
     return normals;
 }
 
-export { createNormals }
+export {
+    createNormals
+}

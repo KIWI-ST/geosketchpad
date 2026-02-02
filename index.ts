@@ -1,5 +1,5 @@
 
-import { GeodeticCoordinate, GeometryLayer, Globe, Hemisphere, TiandituTileLayer } from '../src/index';
+import { GeodeticCoordinate, GeometryLayer, Globe, Hemisphere, TiandituTileLayer } from './src/index';
 
 const map = new Globe({
     width: window.innerWidth - 30,
@@ -23,7 +23,7 @@ geometryLayer.add(g0);
 
 
 map.on('frameend', (performance) => {
-    document.getElementById('frameLabel').textContent = `帧率:${(+performance).toFixed(2)}`;
+    document.getElementById('frameLabel')!.textContent = `帧率:${(+performance).toFixed(2)}`;
 });
 
 // setTimeout(() => {

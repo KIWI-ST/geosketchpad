@@ -1,8 +1,6 @@
-import { Quat, Vec2, Vec3 } from 'kiwi.matrix';
-
+import { PAN_EVENTS, type IClientPoint, type IPanEventParam } from '@pipegpu/camera';
 import { Globe } from '../Globe';
-
-import { IClientPoint, IPanEventParam, PAN_EVENTS } from '../../core/Format';
+import { quat, vec3, type Quat, type Vec3 } from 'wgpu-matrix';
 
 /**
  * 
@@ -61,20 +59,20 @@ declare module './../Globe' {
 /**
  * 
  */
-Globe.prototype.registerCameraPan = function ():void {
+Globe.prototype.registerCameraPan = function (): void {
     const g = this as Globe;
     g._state_pan_ = {
-        paning:false,
-        m_lastRotateGlobeFromVector:new Vec3(),
-        m_lastRotateGlobeAxis:new Vec3(),
-        m_lastRotateGlobeAngle:0,
-        m_lastPostition:{clientX:0, clientY:0},
-        m_rotateGlobeQuaternion:new Quat(),
+        paning: false,
+        m_lastRotateGlobeFromVector: vec3.create(),
+        m_lastRotateGlobeAxis: vec3.create(),
+        m_lastRotateGlobeAngle: 0,
+        m_lastPostition: { clientX: 0, clientY: 0 },
+        m_rotateGlobeQuaternion: quat.create(),
     }
     //注册事件
-    g.on(PAN_EVENTS.panstart, g.onPanStart);
-    g.on(PAN_EVENTS.paning, g.onPaning);
-    g.on(PAN_EVENTS.panend, g.onPanend);
+    g.on(PAN_EVENTS.panstart, g.onPanStart, g);
+    g.on(PAN_EVENTS.paning, g.onPaning, g);
+    g.on(PAN_EVENTS.panend, g.onPanend, g);
 }
 
 /**
@@ -83,20 +81,19 @@ Globe.prototype.registerCameraPan = function ():void {
  */
 Globe.prototype.panFromTo = function (fm: Vec3, to: Vec3): void {
     //空的起点和终点取消操作
-    if(fm==null||to==null) return;
+    if (fm == null || to == null) return;
     const g = this as Globe;
     // Assign the new animation start time.
-    g._state_pan_.m_lastRotateGlobeFromVector = fm.clone();
-    g._state_pan_.m_lastRotateGlobeAxis = fm.clone().cross(to).normalize();
-    g._state_pan_.m_lastRotateGlobeAngle = fm.angle(to);
+    g._state_pan_.m_lastRotateGlobeFromVector = vec3.clone(fm);
+    g._state_pan_.m_lastRotateGlobeAxis = vec3.normalize(vec3.cross(fm, to));
+    g._state_pan_.m_lastRotateGlobeAngle = vec3.angle(fm, to);
     //旋转四元数
-    g._state_pan_.m_rotateGlobeQuaternion = new Quat().setAxisAngle(g._state_pan_.m_lastRotateGlobeAxis, -g._state_pan_.m_lastRotateGlobeAngle);
+    g._state_pan_.m_rotateGlobeQuaternion = quat.fromAxisAngle(g._state_pan_.m_lastRotateGlobeAxis, -g._state_pan_.m_lastRotateGlobeAngle);
     const offset = g._state_camera_.camera.Position.clone().sub(g._state_camera_.target);
     offset.applyQuat(g._state_pan_.m_rotateGlobeQuaternion);
     g._state_camera_.camera.Up.applyQuat(g._state_pan_.m_rotateGlobeQuaternion);
     //更新相机位置
     g._state_camera_.camera.Position = offset.add(g._state_camera_.target)
-
 }
 
 /**
@@ -106,8 +103,8 @@ Globe.prototype.onPanStart = function (panParam: IPanEventParam): void {
     const g = this as Globe, cp = panParam.currentPosition;
     g._state_pan_.paning = true;
     g._state_pan_.m_lastPostition = {
-        clientX:cp.clientX,
-        clientY:cp.clientY,
+        clientX: cp?.clientX || 0,
+        clientY: cp?.clientY || 0,
     }
 }
 
@@ -117,15 +114,15 @@ Globe.prototype.onPanStart = function (panParam: IPanEventParam): void {
 Globe.prototype.onPaning = function (panParam: IPanEventParam): void {
     const g = this as Globe, cp = panParam.currentPosition;
     const tc = {
-        clientX: cp.clientX,
-        clientY: cp.clientY,
+        clientX: cp?.clientX || 0,
+        clientY: cp?.clientY || 0,
     };
     const fm = g.rayTrackOnSphere(g._state_pan_.m_lastPostition);
     const to = g.rayTrackOnSphere(tc);
     g.panFromTo(fm, to);
-    g._state_pan_.m_lastPostition={
-        clientX:tc.clientX,
-        clientY:tc.clientY,
+    g._state_pan_.m_lastPostition = {
+        clientX: tc.clientX,
+        clientY: tc.clientY,
     }
 }
 

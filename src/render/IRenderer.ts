@@ -1,4 +1,5 @@
-import { PerspectiveCamera } from "../camera/PerspectiveCamera";
+import type { PerspectiveCamera } from "@pipegpu/camera";
+
 
 /**
  * - Globe

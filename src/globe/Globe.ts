@@ -1,11 +1,11 @@
-import { browser } from '../util/browser';
+
+import { EventEmitter } from '@pipegpu/camera';
 import { isString } from '../util/isString';
-import { IRenderer } from '../render/IRenderer';
-import { Ellipsoid } from '../core/Ellipsoid';
-import { EventEmitter } from '../core/EventEmitter';
-import { GeodeticCoordinate } from '../core/GeodeticCoordinate';
-import { Sketchpad, TSketchpadDataSchema } from '../sketchpad/Sektchpad';
-import { Projection, WebMercatorProjection } from '../core/Projection';
+import { WebMercatorProjection, type Ellipsoid, type GeodeticCoordinate, type Projection } from '@pipegpu/geography';
+import type { IRenderer } from '../render/IRenderer';
+import type { Sketchpad, TSketchpadDataSchema } from '../sketchpad/Sektchpad';
+
+
 
 /**
  * @class
@@ -68,7 +68,7 @@ class Globe extends EventEmitter {
     /**
      * Globe总渲染器，调度入口
      */
-    protected renderer: IRenderer;
+    protected renderer?: IRenderer;
 
     /**
      * 装载到场景的可渲染对象集合
@@ -106,7 +106,7 @@ class Globe extends EventEmitter {
     /**
      * 地图当前缩放层级
      */
-    public get Zoom():number{
+    public get Zoom(): number {
         return this._state_quadtree_.level;
     }
 
@@ -155,7 +155,7 @@ class Globe extends EventEmitter {
     ) {
         super();
         this.canvas = (isString(opts.canvas) ? document.getElementById(opts.canvas as string) : opts.canvas) as HTMLCanvasElement;
-        this.devicePixelRatio = opts.devicePixelRatio || browser.devicePixelRatio || 1.0;
+        this.devicePixelRatio = opts.devicePixelRatio || 1.0;
         this.width = opts.width;
         this.height = opts.height;
         this.prjection = new WebMercatorProjection();
@@ -191,7 +191,7 @@ class Globe extends EventEmitter {
     }
 
     private initAuxTools = (): void => {
-        this.EnableCursorAuxTool();
+        // this.EnableCursorAuxTool();
     }
 
     /**

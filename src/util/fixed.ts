@@ -1,7 +1,4 @@
-import { Mat4 } from "kiwi.matrix";
-
 /**
- * 
  * @param x rad
  */
 const sin = function (x: number): number {
@@ -9,7 +6,6 @@ const sin = function (x: number): number {
 };
 
 /**
- * 
  * @param x rad
  */
 const cos = function (x: number): number {

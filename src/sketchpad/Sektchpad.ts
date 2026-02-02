@@ -1,5 +1,5 @@
 import { Globe } from "../globe/Globe";
-import { IRendererOS } from "../render/IRendererOS";
+import type { IRendererOS } from "../render/IRendererOS";
 import { Renderable } from "../render/Renderable";
 
 interface TSketchpadDataSchema {
@@ -20,16 +20,15 @@ interface TSketchpadDataSchema {
  * 
  */
 class Sketchpad<T extends TSketchpadDataSchema> extends Renderable {
-
     /** 
      * globe 
      */
-    protected g: Globe;
+    protected g?: Globe;
 
     /**
      * 离屏渲染对象 
      */
-    private renderer: IRendererOS<T>;
+    private renderer?: IRendererOS<T>;
 
     /**
      * globe object 
@@ -73,10 +72,9 @@ class Sketchpad<T extends TSketchpadDataSchema> extends Renderable {
     /** 
      * 渲染器 
      */
-    public get Renderer(): IRendererOS<T> {
+    public get Renderer(): IRendererOS<T> | undefined {
         return this.renderer;
     }
-
 }
 
 export {

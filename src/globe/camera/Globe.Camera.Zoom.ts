@@ -1,9 +1,9 @@
+import { clamp, Tween, ZOOM_EVENTS, type IZoomEventParam } from '@pipegpu/camera';
 import { Globe } from '../Globe';
 
-import { clamp } from '../../util/clamp';
-import { Tween } from '../../core/Tween';
-import { IZoomEventParam, ZOOM_EVENTS } from '../../core/Format';
-
+/**
+ * 
+ */
 declare module './../Globe' {
   interface Globe {
     /**
@@ -37,18 +37,20 @@ Globe.prototype.registerCameraZoom = function (): void {
  * 
  */
 Globe.prototype.onWheeling = function (zoomEventParam: IZoomEventParam): void {
-  const g = this as Globe, e = zoomEventParam.domEvent as WheelEvent, currentPosition = zoomEventParam.currentPosition, value = zoomEventParam.value;
+  const g = this as Globe, e = zoomEventParam.domEvent as WheelEvent, currentPosition = zoomEventParam.currentPosition, value = zoomEventParam.value || 0;
   const fr = g.rayTrackOnSphere(currentPosition);
   if (fr === null) return; //缩放点不在地球上（无焦点）
-  const lv = clamp(value > 0 ? g.Zoom - zoomEventParam.zoom : g.Zoom + zoomEventParam.zoom, g.Origin.zoomMin, g.Origin.zoomMax);
+  const lv = clamp(value > 0 ? (g.Zoom - zoomEventParam.zoom) : g.Zoom + zoomEventParam.zoom || 0, g.Origin.zoomMin, g.Origin.zoomMax);
   const camera = g._state_camera_.camera, target = g._state_camera_.target;
   //
   const total = camera.Position.len() - g.MaximumRadius - g.getMaximumCameraHeightByLevel(lv);
   g._state_handler_zoom_.zooming = true;
   const cached = { fr: fr, len: 0 };
   //动画
-  new Tween().from({ len: 0 }).to({ len: total }).duration(zoomEventParam.zoom * 120)
-    .updateHandler((v: { len: number }) => {
+  new Tween({ len: 0 })
+    .to({ len: total })
+    .setDuration((zoomEventParam.zoom || 0) * 120)
+    .onUpdate((v) => {
       const eyeDirection = camera.Position.clone().sub(target).normalize();
       const deltaDistance = v.len - cached.len;
       const delta = eyeDirection.scale(deltaDistance);
@@ -57,7 +59,7 @@ Globe.prototype.onWheeling = function (zoomEventParam: IZoomEventParam): void {
       g.panFromTo(cached.fr, to);
       cached.len = v.len;
     })
-    .completeHandler(() => {
+    .onComplete(() => {
       g.emit(ZOOM_EVENTS.wheelend);
     })
     .start();

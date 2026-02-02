@@ -1,4 +1,4 @@
-import { resolve } from 'path'
+import { resolve } from 'path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -20,7 +20,7 @@ export default defineConfig({
         port: 4080,
         strictPort: 4080
     },
-    assetsInclude:[
+    assetsInclude: [
         "**/*.txt"
     ]
 });

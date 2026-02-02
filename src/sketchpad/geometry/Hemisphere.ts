@@ -1,6 +1,6 @@
 import { Vec3, Mat4, GLMatrix } from "kiwi.matrix";
 
-import { GeodeticCoordinate } from "./../../core/GeodeticCoordinate";
+import { GeodeticCoordinate } from "../../core/GeodeticCoordinate";
 import { Sketchpad, TSketchpadDataSchema } from "../Sektchpad";
 
 /**
@@ -17,7 +17,7 @@ interface HemisphereDataSchema extends TSketchpadDataSchema {
 /**
  * 半球几何体绘制
  */
-class Hemisphere extends Sketchpad<HemisphereDataSchema>{
+class Hemisphere extends Sketchpad<HemisphereDataSchema> {
 
     private coordinate: GeodeticCoordinate;
 

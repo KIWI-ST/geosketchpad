@@ -1,6 +1,6 @@
-import { IRenderer } from './IRenderer';
-import { EventEmitter } from '../core/EventEmitter';
+import { EventEmitter } from '@pipegpu/camera';
 
+import type { IRenderer } from './IRenderer';
 
 /**
  * 可渲染对象通用方法
@@ -31,6 +31,9 @@ class Renderable extends EventEmitter {
      */
     protected getRegisterRender = (name: string): { new(...args: any[]): IRenderer } => {
         const clazz = Renderable.renderers.get(name);
+        if (!clazz) {
+            throw new Error('[E][Renderable][getRegisterRender] renderer class not found or invalid.')
+        }
         return clazz;
     }
 }

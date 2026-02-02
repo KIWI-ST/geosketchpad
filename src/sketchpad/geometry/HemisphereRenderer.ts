@@ -2,12 +2,12 @@ import { IPipeCommand, PipeGL, Props, TAttribute, TProps, TUniform } from "pipeg
 
 import { PerspectiveCamera } from "../../camera/PerspectiveCamera";
 import { Hemisphere, HemisphereDataSchema } from "./Hemisphere";
-import { SketchpadRenderer } from './../SketchpadRenderer';
+import { SketchpadRenderer } from '../SketchpadRenderer';
 
 interface IProps extends TProps {
     viewProjection: number[];
     ratio: number;
-    alpha:number;
+    alpha: number;
 }
 
 interface Attribute extends TAttribute {
@@ -18,14 +18,14 @@ interface Attribute extends TAttribute {
 interface Uniform extends TUniform {
     viewProjection: Props<IProps>;
     ratio: Props<IProps>;
-    alpha:Props<IProps>;
+    alpha: Props<IProps>;
     modelMatrix: number[];
 }
 
 /**
  * 
  */
-class HemisphereRenderer extends SketchpadRenderer<HemisphereDataSchema>{
+class HemisphereRenderer extends SketchpadRenderer<HemisphereDataSchema> {
 
     private d0: IPipeCommand;
 
@@ -39,7 +39,7 @@ class HemisphereRenderer extends SketchpadRenderer<HemisphereDataSchema>{
      */
     prepare = (data: HemisphereDataSchema): void => {
         const { ctx3d } = this;
-        this.d0= ctx3d.compile<Attribute, Uniform>({
+        this.d0 = ctx3d.compile<Attribute, Uniform>({
 
             vert: `precision mediump float;
             
@@ -84,7 +84,7 @@ class HemisphereRenderer extends SketchpadRenderer<HemisphereDataSchema>{
                 viewProjection: new Props<IProps>('viewProjection'),
                 modelMatrix: data.modelMatrix,
                 ratio: new Props<IProps>('ratio'),
-                alpha:new Props<IProps>('alpha'),
+                alpha: new Props<IProps>('alpha'),
             },
 
             elements: data.indices,
@@ -102,7 +102,7 @@ class HemisphereRenderer extends SketchpadRenderer<HemisphereDataSchema>{
         const batch: IProps[] = [];
         const r = Math.tan(framestamp * 0.0008);
         const ratio = r > 1 ? 1 : r < 0 ? 1 : r;
-        batch.push({ viewProjection: camera.ViewProjectionMatrix.value, ratio, alpha:ratio });
+        batch.push({ viewProjection: camera.ViewProjectionMatrix.value, ratio, alpha: ratio });
         d0.batch<IProps>(batch);
     }
 

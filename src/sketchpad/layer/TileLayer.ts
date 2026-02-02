@@ -1,6 +1,6 @@
 import { rgba } from "../../util/rgba";
 import { llpVertex } from "../../util/llp";
-import { QuadtreeTile } from "./../../core/QuadtreeTile";
+import { QuadtreeTile } from "../../core/QuadtreeTile";
 import { Sketchpad, TSketchpadDataSchema } from "../Sektchpad";
 
 /**
@@ -46,7 +46,7 @@ interface TileLayerDataSchema extends TSketchpadDataSchema {
 /**
  * 
  */
-class TileLayer extends Sketchpad<TileLayerDataSchema>{
+class TileLayer extends Sketchpad<TileLayerDataSchema> {
     /**
      * 
      */
@@ -100,23 +100,23 @@ class TileLayer extends Sketchpad<TileLayerDataSchema>{
             const q = QUEUE.shift();
             const { uri, vertices, key } = q;
             CACHE.set(key, { uri, vertices });
-            g.acquireWorker('RGBAWorker', {workerKey:key, args:[uri, key, 256, 256]})
-            .then(mbus=>{
-                const mKey = mbus.workerKey;
-                const mWidth = mbus.args[0];
-                const mHeight = mbus.args[1];
-                const mChannel = mbus.args[2];
-                const buf = mbus.buffer as Uint8Array;
-                const schema: TileLayerDataSchema = {
-                    key: mKey,
-                    width: mWidth,
-                    height: mHeight,
-                    channel: mChannel,
-                    vertices: vertices,
-                    textureBuffer: buf
-                };
-                this.Renderer.prepare(schema);
-            });
+            g.acquireWorker('RGBAWorker', { workerKey: key, args: [uri, key, 256, 256] })
+                .then(mbus => {
+                    const mKey = mbus.workerKey;
+                    const mWidth = mbus.args[0];
+                    const mHeight = mbus.args[1];
+                    const mChannel = mbus.args[2];
+                    const buf = mbus.buffer as Uint8Array;
+                    const schema: TileLayerDataSchema = {
+                        key: mKey,
+                        width: mWidth,
+                        height: mHeight,
+                        channel: mChannel,
+                        vertices: vertices,
+                        textureBuffer: buf
+                    };
+                    this.Renderer.prepare(schema);
+                });
         }
     }
 }
