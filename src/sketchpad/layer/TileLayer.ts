@@ -1,7 +1,6 @@
-import { rgba } from "../../util/rgba";
-import { llpVertex } from "../../util/llp";
-import { QuadtreeTile } from "../../core/QuadtreeTile";
-import { Sketchpad, TSketchpadDataSchema } from "../Sektchpad";
+import { llpVertex, type QuadtreeTile } from "@pipegpu/geography";
+import { Sketchpad, type TSketchpadDataSchema } from "../Sektchpad";
+
 
 /**
  * TileLayer 数据组织规范
@@ -35,7 +34,7 @@ interface TileLayerDataSchema extends TSketchpadDataSchema {
     /**
      * 
      */
-    vertices?: number[][];
+    vertices?: Float32Array[];
 
     /**
      * 
@@ -56,8 +55,8 @@ class TileLayer extends Sketchpad<TileLayerDataSchema> {
      * 
      */
     registerEvents = () => {
-        this.g.on('tileupdated', this.prepareData, this);
-        this.g.on('worker', this.prepareWorker, this);
+        this.g?.on('tileupdated', this.prepareData, this);
+        this.g?.on('worker', this.prepareWorker, this);
     }
 
     /**

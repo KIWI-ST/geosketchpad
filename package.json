@@ -27,6 +27,7 @@
     "@pipegpu/worker": "*",
     "@pipegpu/geography": "*",
     "@pipegpu/camera": "*",
+    "@pipegpu/core": "*",
     "wgpu-matrix": "^3.4.0"
   }
 }

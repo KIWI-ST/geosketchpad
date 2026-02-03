@@ -12,7 +12,6 @@ declare module './../Globe' {
     registerCameraZoom(): void;
 
     /**
-     * 
      * @param zoomEventParam 
      */
     onWheeling(zoomEventParam: IZoomEventParam): void;
@@ -29,8 +28,8 @@ declare module './../Globe' {
  */
 Globe.prototype.registerCameraZoom = function (): void {
   const g = this as Globe;
-  g.on(ZOOM_EVENTS.wheel, g.onWheeling);
-  g.on(ZOOM_EVENTS.wheelend, g.onWheelEnd);
+  g.on(ZOOM_EVENTS.wheel, g.onWheeling, g);
+  g.on(ZOOM_EVENTS.wheelend, g.onWheelEnd, g);
 }
 
 /**
@@ -40,7 +39,7 @@ Globe.prototype.onWheeling = function (zoomEventParam: IZoomEventParam): void {
   const g = this as Globe, e = zoomEventParam.domEvent as WheelEvent, currentPosition = zoomEventParam.currentPosition, value = zoomEventParam.value || 0;
   const fr = g.rayTrackOnSphere(currentPosition);
   if (fr === null) return; //缩放点不在地球上（无焦点）
-  const lv = clamp(value > 0 ? (g.Zoom - zoomEventParam.zoom) : g.Zoom + zoomEventParam.zoom || 0, g.Origin.zoomMin, g.Origin.zoomMax);
+  const lv = clamp(value > 0 ? (g.Zoom - (zoomEventParam.zoom || 0)) : g.Zoom + (zoomEventParam.zoom || 0), g.Origin.zoomMin, g.Origin.zoomMax);
   const camera = g._state_camera_.camera, target = g._state_camera_.target;
   //
   const total = camera.Position.len() - g.MaximumRadius - g.getMaximumCameraHeightByLevel(lv);

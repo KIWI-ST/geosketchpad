@@ -31,10 +31,6 @@
     },
     "rootDir": "src",
     "include": [
-        "example/**/*",
-        "dist/**/*",
-        "src/**/*",
-        "typings.d.ts",
-        "index.ts"
+        "./**/*"
     ]
 }

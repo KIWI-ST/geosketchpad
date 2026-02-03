@@ -1,6 +1,7 @@
 import { PAN_EVENTS, type IClientPoint, type IPanEventParam } from '@pipegpu/camera';
-import { Globe } from '../Globe';
 import { quat, vec3, type Quat, type Vec3 } from 'wgpu-matrix';
+
+import { Globe } from '../Globe';
 
 /**
  * 

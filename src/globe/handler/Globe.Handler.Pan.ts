@@ -1,14 +1,13 @@
-import { Vec2 } from 'kiwi.matrix';
+
+import { vec2, type Vec2 } from 'wgpu-matrix';
+import { END_EVENTS, MOVE_EVENTS, PAN_EVENTS, START_EVENTS, type IDOMEventParam, type IPanEventParam } from '@pipegpu/camera';
 
 import { Globe } from './../Globe';
-
-import { split } from '../../util/split';
-import { getEventContainerPosition } from '../../util/dom';
-import { END_EVENTS, IDOMEventParam, IPanEventParam, MOVE_EVENTS, PAN_EVENTS, START_EVENTS } from '../../core/Format';
+import { split } from '../../core/split';
+import { getEventContainerPosition } from '../../core/dom';
 
 /**
  * 参考
- * https://github.com/maptalks/maptalks.js/blob/1d98540a0af728e80cbac133278143fc1c6a4c51/src/handler/Drag.js
  * 提供Global的Pan事件发布
  */
 declare module './../Globe' {
@@ -59,12 +58,12 @@ declare module './../Globe' {
 Globe.prototype.registerPanHandlerHood = function (): void {
     const g = this as Globe;
     g._state_handler_pan_ = {
-        startPosition: new Vec2(),
+        startPosition: vec2.create(),
         moved: false,
         interupted: false,
     };
     split(START_EVENTS).forEach((type) => {
-        g.on(type, g.panMousedownOrTouchstart);
+        g.on(type, g.panMousedownOrTouchstart, g);
     });
 }
 
@@ -74,10 +73,12 @@ Globe.prototype.registerPanHandlerHood = function (): void {
 Globe.prototype.panMousedownOrTouchstart = function (args: IDOMEventParam): void {
     const g = this as Globe, e = args.domEvent;
     //右键或多点触控，不分发事件
-    if (e['button'] === 2 || (e['touches'] && e['touches'].length > 1)) return;
+    if ((e instanceof MouseEvent && e.button === 2) || (e instanceof TouchEvent && e.touches && e.touches.length > 1)) {
+        return;
+    }
     //https://www.w3cschool.cn/fetch_api/fetch_api-w3zc2v4w.html
     const cp = getEventContainerPosition(e, g.Canvas);
-    g._state_handler_pan_.startPosition = new Vec2().set(cp.clientX, cp.clientY);
+    g._state_handler_pan_.startPosition = vec2.create(cp.clientX, cp.clientY);
     const panEventParam: IPanEventParam = {
         domEvent: e,
         currentPosition: {
@@ -88,8 +89,8 @@ Globe.prototype.panMousedownOrTouchstart = function (args: IDOMEventParam): void
     //发送事件
     g.emit(PAN_EVENTS.panstart, panEventParam);
     //注册事件
-    g.on(MOVE_EVENTS[e.type], g.panMousemoveOrTouchmove);
-    g.on(END_EVENTS[e.type], g.panMouseupOrTouchend);
+    g.on(MOVE_EVENTS[e.type], g.panMousemoveOrTouchmove, g);
+    g.on(END_EVENTS[e.type], g.panMouseupOrTouchend, g);
 }
 
 /**
@@ -97,26 +98,24 @@ Globe.prototype.panMousedownOrTouchstart = function (args: IDOMEventParam): void
  */
 Globe.prototype.panMousemoveOrTouchmove = function (args: IDOMEventParam): void {
     const g = this as Globe, e = args.domEvent;
-    //使用touch平移地图时，如果出现多触电，则认为平移结束
-    if (e['touches'] && e['touches'].length > 1) {
+    if (e instanceof TouchEvent && e.touches && e.touches.length > 1) {
         if (g._state_handler_pan_.moved) {
             g._state_handler_pan_.interupted = true;
             g.panMouseupOrTouchend(args);
         }
         return;
     }
-    //新的位置
     const cp = getEventContainerPosition(e, g.Canvas);
-    const currentPosition = new Vec2().set(cp.clientX, cp.clientY);
-    //如果移动offset为0，取消执行
-    const offset = currentPosition.clone().sub(g._state_handler_pan_.startPosition);
-    if(!offset.x && !offset.y) return;
-    //构造pan参数
-    const panEventParam:IPanEventParam= {
-        domEvent:e,
-        currentPosition:{
-            clientX:cp.clientX,
-            clientY:cp.clientY
+    const currentPosition = vec2.create(cp.clientX, cp.clientY);
+    const offset = vec2.sub(currentPosition, g._state_handler_pan_.startPosition);
+    if (!offset[0] && !offset[1]) {
+        return;
+    }
+    const panEventParam: IPanEventParam = {
+        domEvent: e,
+        currentPosition: {
+            clientX: cp.clientX,
+            clientY: cp.clientY
         }
     };
     g.emit(PAN_EVENTS.paning, panEventParam);
@@ -130,11 +129,11 @@ Globe.prototype.panMouseupOrTouchend = function (args: IDOMEventParam): void {
     const g = this as Globe, e = args.domEvent;
     g.releasePanHandlerEvents();
     const cp = getEventContainerPosition(e, g.Canvas);
-    const panEventParam :IPanEventParam={
-        domEvent:e,
-        currentPosition:{
-            clientX:cp.clientX,
-            clientY:cp.clientY
+    const panEventParam: IPanEventParam = {
+        domEvent: e,
+        currentPosition: {
+            clientX: cp.clientX,
+            clientY: cp.clientY
         }
     }
     g.emit(PAN_EVENTS.panend, panEventParam);
@@ -148,8 +147,8 @@ Globe.prototype.releasePanHandlerEvents = function (): void {
     for (const key in MOVE_EVENTS) {
         const moveEventName = MOVE_EVENTS[key];
         const endEventName = END_EVENTS[key];
-        g.off(moveEventName, g.panMousemoveOrTouchmove);
-        g.off(endEventName, g.panMouseupOrTouchend);
+        g.off(moveEventName, g.panMousemoveOrTouchmove, g);
+        g.off(endEventName, g.panMouseupOrTouchend, g);
     }
 }
 

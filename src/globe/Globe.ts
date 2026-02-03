@@ -1,14 +1,17 @@
 
 import { EventEmitter } from '@pipegpu/camera';
-import { isString } from '../util/isString';
 import { WebMercatorProjection, type Ellipsoid, type GeodeticCoordinate, type Projection } from '@pipegpu/geography';
+
+import { isString } from '../core/isString';
 import type { IRenderer } from '../render/IRenderer';
 import type { Sketchpad, TSketchpadDataSchema } from '../sketchpad/Sektchpad';
 
-
-
 /**
- * @class
+ * @class Globe
+ * @description need init with async funciton style.
+ * @example
+ * const g = new Globe();
+ * await g.init();
  */
 class Globe extends EventEmitter {
     /**
@@ -17,7 +20,6 @@ class Globe extends EventEmitter {
     public static hooks: { func: Function, args: any[] }[] = [];
 
     /**
-     * 
      * @param func 
      * @param args 
      */
@@ -136,7 +138,6 @@ class Globe extends EventEmitter {
     }
 
     /**
-    * 
     * @param opts 
     */
     constructor(
@@ -166,10 +167,13 @@ class Globe extends EventEmitter {
             zoomMax: opts.zoomMax || 20,
             zoomMin: opts.zoomMin || 0
         };
+    }
+
+    public init = async () => {
         this.initCavnasAndCamera();
         this.initHooks();
-        //辅助功能，待设计开启关闭
-        this.initAuxTools();
+        // 辅助功能，待设计开启关闭
+        // this.initAuxTools();
     }
 
     private initCavnasAndCamera = (): void => {
@@ -179,7 +183,6 @@ class Globe extends EventEmitter {
         this.canvas.height = rh;
         this.canvas.style.width = `${w}px`;
         this.canvas.style.height = `${h}px`;
-        //register camera
         this.registerCamera(c);
     }
 

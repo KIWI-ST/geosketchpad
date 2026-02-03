@@ -1,9 +1,9 @@
 import { Globe } from "../Globe";
 
-import { now } from "../../util/now";
+import { now } from "../../core/now";
 
 import { IClientPoint, IDOMEventParam, IZoomEventParam, ZOOM_EVENTS } from "../../core/Format";
-import { getEventContainerPosition, preventDefault, stopPropagation } from "../../util/dom";
+import { getEventContainerPosition, preventDefault, stopPropagation } from "../../core/dom";
 
 //参考
 const wheelZoomDelta = 4.000244140625;

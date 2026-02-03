@@ -1,7 +1,7 @@
 import { Globe } from './Globe';
 
-import { addDOMEvent, preventDefault } from '../util/dom';
-import { now } from '../util/now';
+import { addDOMEvent, preventDefault } from '../core/dom';
+import { now } from '../core/now';
 import { IDOMEventParam } from '../core/Format';
 
 /**
