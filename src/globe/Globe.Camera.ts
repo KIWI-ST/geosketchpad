@@ -1,11 +1,9 @@
-import { GLMatrix, Vec3 } from 'kiwi.matrix';
+
+import { mat4, vec3, type Vec3 } from 'wgpu-matrix';
+import { Ray, type GeodeticCoordinate } from '@pipegpu/geography';
+import { type IClientPoint, type IViewContainer, PerspectiveCamera } from '@pipegpu/camera';
 
 import { Globe } from './Globe';
-
-import { Ray } from '../core/Ray';
-import { PerspectiveCamera } from '../camera/PerspectiveCamera';
-import { GeodeticCoordinate } from '../core/GeodeticCoordinate';
-import { IClientPoint, IViewContainer } from '../core/Format';
 
 /**
  * View支持，在Camear下支持
@@ -54,7 +52,7 @@ declare module './Globe' {
          * 空间坐转换成地球大地坐标（投射到地球表面）
          * @param spaceCoord 
          */
-        spaceCoordinateToGeographic(spaceCoord:Vec3):GeodeticCoordinate;
+        spaceCoordinateToGeographic(spaceCoord: Vec3): GeodeticCoordinate;
 
         /**
          * 
@@ -82,7 +80,13 @@ Globe.prototype.registerCamera = function (coord: GeodeticCoordinate): void {
         height = box.height;
     //3. 计算
     g._state_camera_ = {
-        camera: new PerspectiveCamera(60, width, height, height/2/Math.tan(GLMatrix.toRadian(60)), g.Ellipsoid.MaximumRadius * 10),
+        camera: new PerspectiveCamera(
+            60,
+            width / height,
+            0.1,
+            g.Ellipsoid.MaximumRadius * 3,
+            false
+        ),
         viewContainer: {
             left,
             top,
@@ -93,12 +97,12 @@ Globe.prototype.registerCamera = function (coord: GeodeticCoordinate): void {
             clientX: width / 2,
             clientY: height / 2
         },
-        target: new Vec3().set(0, 0, 0)
+        target: vec3.create()
     };
     //4.更新初始化相机参数
     const p0 = g.geographicToSpaceCoordinate(coord);
     g._state_camera_.camera.Position = p0;
-    g._state_camera_.camera.lookAt(new Vec3().set(0, 0, 0));
+    g._state_camera_.camera.Target = vec3.create(0, 0, 0);
 }
 
 /**
@@ -108,8 +112,8 @@ Globe.prototype.rayTrackOnSphere = function (point: IClientPoint): Vec3 {
     const g = this as Globe;
     const pndc = g.normalizedDeviceCoordinate(point);
     const space = g.normalizedDeviceCoordinateToSpaceCoordinate(pndc);
-    const d = space.sub(g._state_camera_.camera.Position.clone()).normalize();
-    const ray = new Ray(g._state_camera_.camera.Position.clone(), d);
+    const d = vec3.normalize(vec3.sub(space, g._state_camera_.camera.Position));
+    const ray = new Ray(g._state_camera_.camera.Position, d);
     return ray.intersectSphere(g.Ellipsoid);
 }
 
@@ -121,16 +125,17 @@ Globe.prototype.normalizedDeviceCoordinate = function (point: IClientPoint): Vec
     const g = this as Globe;
     const x = (point.clientX / g._state_camera_.viewContainer.width) * 2 - 1,
         y = -(point.clientY / g._state_camera_.viewContainer.height) * 2 + 1;
-    return new Vec3().set(x, y, 1);
+    return vec3.create(x, y, 1);
 }
 
 /**
  * ndc坐标换算成空间坐标
+ * @description https://github.com/pipegpu/pipegpu.matrix/blob/8f734f948e79df7fce7664d20274d1769719259a/src/matrix/Vec3.ts#L516C1-L524C6
  */
 Globe.prototype.normalizedDeviceCoordinateToSpaceCoordinate = function (pndc: Vec3): Vec3 {
     const g = this as Globe;
-    const m4 = g._state_camera_.camera.CameraMatrix.clone().multiply(g._state_camera_.camera.ProjectionMatrix.clone().invert());
-    return pndc.clone().applyMatrix4(m4);
+    const m4 = mat4.invert(mat4.multiply(g._state_camera_.camera.ViewMatrix, g._state_camera_.camera.ProjectionMatrix));
+    return vec3.transformMat4(pndc, m4);
 }
 
 /**
@@ -138,7 +143,7 @@ Globe.prototype.normalizedDeviceCoordinateToSpaceCoordinate = function (pndc: Ve
  */
 Globe.prototype.spaceCoordinateToNormaziledDeveiceCoordinate = function (space: Vec3): Vec3 {
     const g = this as Globe;
-    return space.clone().applyMatrix4(g._state_camera_.camera.ViewProjectionMatrix);
+    return vec3.transformMat4(space, g._state_camera_.camera.ViewProjectionMatrix);
 }
 
 /**
@@ -152,7 +157,7 @@ Globe.prototype.geographicToSpaceCoordinate = function (coord: GeodeticCoordinat
 /**
  * 空间坐标转大地坐标（投影到地球表面）
  */
-Globe.prototype.spaceCoordinateToGeographic = function(spaceCoord:Vec3):GeodeticCoordinate{
+Globe.prototype.spaceCoordinateToGeographic = function (spaceCoord: Vec3): GeodeticCoordinate {
     const g = this as Globe;
     return g.Ellipsoid.spaceToGeographic(spaceCoord);
 }

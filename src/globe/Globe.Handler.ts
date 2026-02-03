@@ -2,7 +2,7 @@ import { Globe } from './Globe';
 
 import { addDOMEvent, preventDefault } from '../core/dom';
 import { now } from '../core/now';
-import { IDOMEventParam } from '../core/Format';
+import type { IDOMEventParam } from '@pipegpu/camera';
 
 /**
  * 浏览器控件支持的交互类型
@@ -73,7 +73,7 @@ declare module './Globe' {
          * 
          */
         _state_handler_dom_: {
-            mouseDownTime: number;
+            mouseDownTime?: number;
         }
     }
 }
@@ -116,16 +116,21 @@ Globe.prototype.handleDOMEvent = function (e: Event): void {
     else if (type === 'click' || type === 'touchend' || type === 'contextmenu') {
         //mousedown | touchstart propogation is stopped
         //ignore the click/touchend/contextmenu
-        if (!this._mouseDownTime)
+        if (!this._state_handler_dom_.mouseDownTime) {
             return;
+        }
         else {
             const downTime = g._state_handler_dom_.mouseDownTime;
             delete g._state_handler_dom_.mouseDownTime;
             const time = now();
-            if ((time - downTime > 300) && (type === 'click' || type === 'contextmenu'))
+            if ((time - (downTime || 0) > 300) && (type === 'click' || type === 'contextmenu')) {
                 return;
-            else if (type === 'touchend' || type === 'click')   //小于300ms认为是双击
+            }
+            else if (type === 'touchend' || type === 'click') {
+                //小于300ms认为是双击
                 type = 'dbclick';
+            }
+
         }
     } else if (type === 'wheel' || (e['touches'] && e['touches'].length === 2)) {
         type = 'zoom';
@@ -138,11 +143,14 @@ Globe.prototype.handleDOMEvent = function (e: Event): void {
  * 
  */
 Globe.prototype.parseEvent = function (e: TouchEvent | MouseEvent, type: string): IDOMEventParam {
-    if (!e) return;
-    const ctx = this as Globe;
     const DOMEventParam: IDOMEventParam = {
         domEvent: e
     };
+    if (!e) {
+        return DOMEventParam;
+    }
+    const ctx = this as Globe;
+
     if (type !== 'keypress' && ctx.getActualEvent(e)) {
         // const containerPoint = getEventContainerPoint(actual, this._containerDOM);
         // DOMEventParam = extend(DOMEventParam, {

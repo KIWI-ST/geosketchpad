@@ -1,9 +1,8 @@
 import { Globe } from "../Globe";
 
-import { now } from "../../core/now";
-
-import { IClientPoint, IDOMEventParam, IZoomEventParam, ZOOM_EVENTS } from "../../core/Format";
 import { getEventContainerPosition, preventDefault, stopPropagation } from "../../core/dom";
+import { ZOOM_EVENTS, type IClientPoint, type IDOMEventParam, type IZoomEventParam } from "@pipegpu/camera";
+import { now } from "../../core/now";
 
 //参考
 const wheelZoomDelta = 4.000244140625;
@@ -41,7 +40,7 @@ declare module './../Globe' {
          */
         _state_handler_zoom_: {
             lastWheelTime: number,
-            lastWheelEvent: WheelEvent,
+            lastWheelEvent?: WheelEvent,
             onceWheelCount: number,
             delate: number,
             active: boolean,
@@ -60,7 +59,6 @@ Globe.prototype.registerZoomHandlerHook = function (): void {
     const g = this as Globe;
     g._state_handler_zoom_ = {
         lastWheelTime: 0,
-        lastWheelEvent: null,
         onceWheelCount: 0,
         delate: 0,
         active: false,
@@ -69,7 +67,7 @@ Globe.prototype.registerZoomHandlerHook = function (): void {
         ensureTrackpad: false,
         zoomOrigin: { clientX: 0, clientY: 0 },
     };
-    g.on('zoom', g.zoomMousewheelOrTouch);
+    g.on('zoom', g.zoomMousewheelOrTouch, g);
 }
 
 /**
@@ -77,7 +75,7 @@ Globe.prototype.registerZoomHandlerHook = function (): void {
  */
 Globe.prototype.releaseZoomHandlerEvents = function (): void {
     const g = this as Globe;
-    g.off('zoom', g.zoomMousewheelOrTouch);
+    g.off('zoom', g.zoomMousewheelOrTouch, g);
 }
 
 /**

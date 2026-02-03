@@ -1,5 +1,5 @@
 import { GeodeticCoordinate } from "@pipegpu/geography";
-import { GeometryLayer, Globe, TiandituTileLayer } from "./src";
+import { Globe } from "./src";
 
 (async () => {
 

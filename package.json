@@ -8,8 +8,9 @@
   "types": "dist/bundle/index.d.ts",
   "type": "module",
   "scripts": {
-    "dev": "vite --debug",
-    "worker": "gulp worker"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "repository": {
     "type": "git",
@@ -21,13 +22,14 @@
   },
   "homepage": "https://github.com/KIWI-ST/geosketchpad#readme",
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
   },
   "dependencies": {
-    "@pipegpu/worker": "*",
-    "@pipegpu/geography": "*",
     "@pipegpu/camera": "*",
     "@pipegpu/core": "*",
+    "@pipegpu/geography": "*",
+    "@pipegpu/worker": "*",
     "wgpu-matrix": "^3.4.0"
   }
 }
