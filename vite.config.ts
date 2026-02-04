@@ -12,6 +12,7 @@ export default {
             input: {
                 main: './index.html'
             }
-        }
+        },
+        sourcemap: true,
     }
 } satisfies UserConfig;

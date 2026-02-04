@@ -1,6 +1,4 @@
-
 import { EventEmitter } from '@pipegpu/camera';
-import { WebMercatorProjection, type Ellipsoid, type GeodeticCoordinate, type Projection } from '@pipegpu/geography';
 import { BaseEntity } from '@pipegpu/ecs';
 import { isString } from './util/isString';
 
@@ -8,15 +6,15 @@ import { isString } from './util/isString';
 // import type { Sketchpad, TSketchpadDataSchema } from './Sektchpad';
 
 /**
- * @class Globe
+ * @class Scene
  * @description need init with async funciton style.
  * @example
- * const g = new Globe();
- * await g.init();
+ * const scene = new Scene();
+ * await scene.init();
  */
-class Earth extends EventEmitter {
+class Scene extends EventEmitter {
     /**
-    * Global启动时执行的钩子
+    *  scene startup loading hook.
     */
     public static hooks: { func: Function, args: any[] }[] = [];
 
@@ -25,23 +23,23 @@ class Earth extends EventEmitter {
      * @param args 
      */
     static registerHook(func: Function, ...args: any[]) {
-        Earth.hooks.push({ func, args });
+        Scene.hooks.push({ func, args });
     }
 
     /**
      * index of entity
      */
-    private entity_uuid_: number = 0;
+    private entityIDX_: number = 0;
 
     /**
      * 初始化地图对象参数
      */
-    protected origin_: {
-        center: GeodeticCoordinate,
-        zoom: number,
-        zoomMin: number,
-        zoomMax: number
-    }
+    // protected origin_: {
+    //     center: GeodeticCoordinate,
+    //     zoom: number,
+    //     zoomMin: number,
+    //     zoomMax: number
+    // }
 
     /**
      * canvas
@@ -56,12 +54,12 @@ class Earth extends EventEmitter {
     /**
      * 当前参考椭球
      */
-    protected ellipsoid_: Ellipsoid;
+    // protected ellipsoid_: Ellipsoid;
 
     /**
      * 当前地图投影
      */
-    protected prjection_: Projection;
+    // protected prjection_: Projection;
 
     /**
      * 显示区域像素宽度
@@ -82,9 +80,9 @@ class Earth extends EventEmitter {
     /**
      * 初始化地图信息快照
      */
-    public get Origin() {
-        return this.origin_;
-    }
+    // public get Origin() {
+    //     return this.origin_;
+    // }
 
     /**
      * dom元素
@@ -96,23 +94,23 @@ class Earth extends EventEmitter {
     /**
      * 获取投影的参考椭球
      */
-    public get Ellipsoid(): Ellipsoid {
-        return this.ellipsoid_;
-    }
+    // public get Ellipsoid(): Ellipsoid {
+    //     return this.ellipsoid_;
+    // }
 
     /**
      * 最长半径（椭球最长轴）
      */
-    public get MaximumRadius(): number {
-        return this.ellipsoid_.MaximumRadius;
-    }
+    // public get MaximumRadius(): number {
+    //     return this.ellipsoid_.MaximumRadius;
+    // }
 
     /**
      * 地图当前缩放层级
      */
-    public get Zoom(): number {
-        return this._state_quadtree_.level;
-    }
+    // public get Zoom(): number {
+    //     return this._state_quadtree_.level;
+    // }
 
     /**
      * 
@@ -146,13 +144,13 @@ class Earth extends EventEmitter {
         opts: {
             width: number,
             height: number,
-            coordinate: GeodeticCoordinate,
+            // coordinate: GeodeticCoordinate,
             canvas: string | HTMLCanvasElement,
-            zoom: number,
-            zoomMax?: number,
+            // zoom: number,
+            // zoomMax?: number,
             zoomMin?: number,
-            zoomable?: boolean,
-            panable?: boolean,
+            // zoomable?: boolean,
+            // panable?: boolean,
             devicePixelRatio?: number,
         }
     ) {
@@ -161,35 +159,37 @@ class Earth extends EventEmitter {
         this.devicePixelRatio_ = opts.devicePixelRatio || 1.0;
         this.width_ = opts.width;
         this.height_ = opts.height;
-        this.prjection_ = new WebMercatorProjection();
-        this.ellipsoid_ = this.prjection_.Ellipsoid;
-        this.origin_ = {
-            center: opts.coordinate.toGeodetic(),
-            zoom: opts.zoom,
-            zoomMax: opts.zoomMax || 20,
-            zoomMin: opts.zoomMin || 0
-        };
+        this.initCavnas();
+        // this.prjection_ = new WebMercatorProjection();
+        // this.ellipsoid_ = this.prjection_.Ellipsoid;
+        // this.origin_ = {
+        // center: opts.coordinate.toGeodetic(),
+        // zoom: opts.zoom,
+        // zoomMax: opts.zoomMax || 20,
+        // zoomMin: opts.zoomMin || 0
+        // };
     }
 
     public init = async () => {
-        this.initCavnasAndCamera();
+
         this.initHooks();
         // 辅助功能，待设计开启关闭
         // this.initAuxTools();
     }
 
-    private initCavnasAndCamera = (): void => {
-        const c = this.origin_.center, r = this.devicePixelRatio_;
+    private initCavnas = (): void => {
+        // const c = this.origin_.center, 
+        const r = this.devicePixelRatio_;
         const w = this.width_, h = this.height_, rw = r * w, rh = r * h;
         this.canvas_.width = rw;
         this.canvas_.height = rh;
         this.canvas_.style.width = `${w}px`;
         this.canvas_.style.height = `${h}px`;
-        this.registerCamera(c);
+        // this.registerCamera(c);
     }
 
     private initHooks = (): void => {
-        Earth.hooks?.forEach(hook => {
+        Scene.hooks?.forEach(hook => {
             const { func, args } = hook;
             func.apply(this, args);
         });
@@ -200,7 +200,7 @@ class Earth extends EventEmitter {
     }
 
     private getUUID() {
-        return `${this.entity_uuid_++}`;
+        return `${this.entityIDX_++}`;
     }
 
     /**
@@ -225,5 +225,5 @@ class Earth extends EventEmitter {
 }
 
 export {
-    Earth
+    Scene
 }

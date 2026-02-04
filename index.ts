@@ -1,16 +1,17 @@
-import { GeodeticCoordinate } from "@pipegpu/geography";
+import { Scene } from './src/Scene';
+import './src/scene/Scene.Handler';
 
 (async () => {
-
-    const earth = new Globe({
+    const scene: Scene = new Scene({
         width: window.innerWidth - 30,
         height: window.innerHeight - 20,
-        zoom: 3,
         canvas: "mapCanvas",
-        coordinate: new GeodeticCoordinate(116.3958, 39.828)
     });
 
-    await earth.init();
+    await scene.init();
+
+    // coordinate: new GeodeticCoordinate(116.3958, 39.828)
+    // const earthEntity = scene.createEntity();
 
 })();
 

@@ -1,14 +1,14 @@
-import { Earth } from '../Earth';
+import type { IDOMEventParam } from '@pipegpu/camera';
+import { Scene } from '../Scene';
 import { addDOMEvent, preventDefault } from '../util/dom';
 import { now } from '../util/now';
-import type { IDOMEventParam } from '@pipegpu/camera';
 
 /**
  * 浏览器控件支持的交互类型
  * 提供：
  * -浏览器支持的交互事件注册
  * -无效的事件响应
- * 
+ *
  */
 const DOM_EVENT_TYPES =
     'wheel ' +
@@ -31,45 +31,44 @@ const DOM_EVENT_TYPES =
  * 合并申明
  * reference:
  * https://www.tslang.cn/docs/handbook/declaration-merging.html
- * https://github.com/maptalks/maptalks.js/blob/master/src/map/Map.DomEvents.js
  */
-declare module '../Earth' {
-    interface Earth {
+declare module './../Scene' {
+    interface Scene {
         /**
-         * 
+         *
          */
         registerDOMEventsHook(): void;
 
         /**
-         * 
-         * @param obj 
-         * @param eventName 
-         * @param handler 
-         * @param context 
+         *
+         * @param obj
+         * @param eventName
+         * @param handler
+         * @param context
          */
         onDOMEvent(obj: HTMLElement, eventName: string, handler: Function, context: object): void;
 
         /**
-         * 
-         * @param e 
+         *
+         * @param e
          */
         handleDOMEvent(e: Event): void;
 
         /**
          * 转换事件对象
-         * @param e 
-         * @param type 
+         * @param e
+         * @param type
          */
         parseEvent(e: Event, type: string): void;
 
         /**
-         * 
-         * @param e 
+         *
+         * @param e
          */
         getActualEvent(e: Event): Event | Touch;
 
         /**
-         * 
+         *
          */
         _state_handler_dom_: {
             mouseDownTime?: number;
@@ -78,23 +77,22 @@ declare module '../Earth' {
 }
 
 /**
- * 统一注册DOM事件
+ * register DOMEvent entry
+ * @function registerDOMEventsHook
  */
-Earth.prototype.registerDOMEventsHook = function () {
-    const g = this as Earth;
-    g._state_handler_dom_ = {
+Scene.prototype.registerDOMEventsHook = function () {
+    const scene = this as Scene;
+    scene._state_handler_dom_ = {
         mouseDownTime: 0
     };
-    //注册DOM事件
-    g.onDOMEvent(g.Canvas, DOM_EVENT_TYPES, g.handleDOMEvent, g);
+    scene.onDOMEvent(scene.Canvas, DOM_EVENT_TYPES, scene.handleDOMEvent, scene);
 }
 
 /**
  * 单个DOM事件过滤
  */
-Earth.prototype.onDOMEvent = function (element: HTMLElement, eventName: string, handler: Function, context: object): void {
-    const g = this as Earth;
-    addDOMEvent(element, DOM_EVENT_TYPES, g.handleDOMEvent, g);
+Scene.prototype.onDOMEvent = function (element: HTMLElement, eventName: string, handler: Function, context: object): void {
+    addDOMEvent(element, eventName, handler, context);
 }
 
 /**
@@ -103,8 +101,8 @@ Earth.prototype.onDOMEvent = function (element: HTMLElement, eventName: string, 
  * 2. 模拟doble click
  * 3. 统一处理touch，clcik
  */
-Earth.prototype.handleDOMEvent = function (e: Event): void {
-    const g = this as Earth;
+Scene.prototype.handleDOMEvent = function (e: Event): void {
+    const g = this as Scene;
     let type = e.type;
     //prevent default context menu
     if (type === 'contextmenu') {
@@ -141,16 +139,16 @@ Earth.prototype.handleDOMEvent = function (e: Event): void {
 }
 
 /**
- * 
+ *
  */
-Earth.prototype.parseEvent = function (e: TouchEvent | MouseEvent, type: string): IDOMEventParam {
+Scene.prototype.parseEvent = function (e: TouchEvent | MouseEvent, type: string): IDOMEventParam {
     const DOMEventParam: IDOMEventParam = {
         domEvent: e
     };
     if (!e) {
         return DOMEventParam;
     }
-    const ctx = this as Earth;
+    const ctx = this as Scene;
     if (type !== 'keypress' && ctx.getActualEvent(e)) {
         // const containerPoint = getEventContainerPoint(actual, this._containerDOM);
         // DOMEventParam = extend(DOMEventParam, {
@@ -164,9 +162,9 @@ Earth.prototype.parseEvent = function (e: TouchEvent | MouseEvent, type: string)
 }
 
 /**
- * 
+ *
  */
-Earth.prototype.getActualEvent = function (e: Event): Event | Touch {
+Scene.prototype.getActualEvent = function (e: Event): Event | Touch {
     if (e instanceof TouchEvent && e.touches && e.touches.length > 0) {
         return e.touches[0];
     }
@@ -177,4 +175,4 @@ Earth.prototype.getActualEvent = function (e: Event): Event | Touch {
 }
 
 //钩子，handler插件需要预执行的方法注册到钩子里
-Earth.registerHook(Earth.prototype.registerDOMEventsHook);
+Scene.registerHook(Scene.prototype.registerDOMEventsHook);

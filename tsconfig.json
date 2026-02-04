@@ -1,19 +1,20 @@
 {
     "compilerOptions": {
-        "allowJs": true,
         "target": "ES2020",
         "useDefineForClassFields": true,
         "module": "ESNext",
         "lib": [
             "ES2020",
             "DOM",
-            "DOM.Iterable",
+            "DOM.Iterable"
         ],
         "declaration": true,
         "outDir": "dist",
         "skipLibCheck": true,
+        "allowJs": true,
+        "esModuleInterop": true,
         /* Bundler mode */
-        "moduleResolution": "bundler",
+        "moduleResolution": "node",
         "allowImportingTsExtensions": true,
         "verbatimModuleSyntax": true,
         "moduleDetection": "force",
@@ -22,15 +23,15 @@
         "strict": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "erasableSyntaxOnly": true,
+        // "erasableSyntaxOnly": true,
         "noFallthroughCasesInSwitch": true,
         "noUncheckedSideEffectImports": true,
         "types": [
-            "@webgpu/types"
+            "@webgpu/types",
+            "vite/client"
         ]
     },
-    "rootDir": "src",
     "include": [
-        "./**/*"
+        "."
     ]
 }
