@@ -1,9 +1,11 @@
 
 import { EventEmitter } from '@pipegpu/camera';
 import { WebMercatorProjection, type Ellipsoid, type GeodeticCoordinate, type Projection } from '@pipegpu/geography';
+import { BaseEntity } from '@pipegpu/ecs';
 import { isString } from './util/isString';
+
 // import type { IRenderer } from './render/IRenderer';
-import type { Sketchpad, TSketchpadDataSchema } from './Sektchpad';
+// import type { Sketchpad, TSketchpadDataSchema } from './Sektchpad';
 
 /**
  * @class Globe
@@ -27,9 +29,14 @@ class Earth extends EventEmitter {
     }
 
     /**
+     * index of entity
+     */
+    private entity_uuid_: number = 0;
+
+    /**
      * 初始化地图对象参数
      */
-    protected origin: {
+    protected origin_: {
         center: GeodeticCoordinate,
         zoom: number,
         zoomMin: number,
@@ -39,65 +46,65 @@ class Earth extends EventEmitter {
     /**
      * canvas
      */
-    protected canvas: HTMLCanvasElement;
+    protected canvas_: HTMLCanvasElement;
 
     /**
      * 设备ppi比率
      */
-    protected devicePixelRatio: number;
+    protected devicePixelRatio_: number;
 
     /**
      * 当前参考椭球
      */
-    protected ellipsoid: Ellipsoid;
+    protected ellipsoid_: Ellipsoid;
 
     /**
      * 当前地图投影
      */
-    protected prjection: Projection;
+    protected prjection_: Projection;
 
     /**
      * 显示区域像素宽度
      */
-    protected width: number;
+    protected width_: number;
 
     /**
      * 显示区域像素高度
      */
-    protected height: number;
+    protected height_: number;
 
     /**
      * 装载到场景的可渲染对象集合
      * @todo ecs entities
      */
-    private sketchpads: Sketchpad<TSketchpadDataSchema>[] = [];
+    private entities_: BaseEntity[] = [];
 
     /**
      * 初始化地图信息快照
      */
     public get Origin() {
-        return this.origin;
+        return this.origin_;
     }
 
     /**
      * dom元素
      */
     public get Canvas(): HTMLCanvasElement {
-        return this.canvas;
+        return this.canvas_;
     }
 
     /**
      * 获取投影的参考椭球
      */
     public get Ellipsoid(): Ellipsoid {
-        return this.ellipsoid;
+        return this.ellipsoid_;
     }
 
     /**
      * 最长半径（椭球最长轴）
      */
     public get MaximumRadius(): number {
-        return this.ellipsoid.MaximumRadius;
+        return this.ellipsoid_.MaximumRadius;
     }
 
     /**
@@ -111,25 +118,25 @@ class Earth extends EventEmitter {
      * 
      */
     public get Width(): number {
-        return this.width;
+        return this.width_;
     }
 
     /**
      * 
      */
     public get Height(): number {
-        return this.height;
+        return this.height_;
     }
 
     public get DevicePixelRatio(): number {
-        return this.devicePixelRatio;
+        return this.devicePixelRatio_;
     }
 
     /**
-     * 
+     * @description all eneities
      */
-    public get Sketchpads(): Sketchpad<TSketchpadDataSchema>[] {
-        return this.sketchpads;
+    public get Entites(): ReadonlyArray<BaseEntity> {
+        return this.entities_;
     }
 
     /**
@@ -150,13 +157,13 @@ class Earth extends EventEmitter {
         }
     ) {
         super();
-        this.canvas = (isString(opts.canvas) ? document.getElementById(opts.canvas as string) : opts.canvas) as HTMLCanvasElement;
-        this.devicePixelRatio = opts.devicePixelRatio || 1.0;
-        this.width = opts.width;
-        this.height = opts.height;
-        this.prjection = new WebMercatorProjection();
-        this.ellipsoid = this.prjection.Ellipsoid;
-        this.origin = {
+        this.canvas_ = (isString(opts.canvas) ? document.getElementById(opts.canvas as string) : opts.canvas) as HTMLCanvasElement;
+        this.devicePixelRatio_ = opts.devicePixelRatio || 1.0;
+        this.width_ = opts.width;
+        this.height_ = opts.height;
+        this.prjection_ = new WebMercatorProjection();
+        this.ellipsoid_ = this.prjection_.Ellipsoid;
+        this.origin_ = {
             center: opts.coordinate.toGeodetic(),
             zoom: opts.zoom,
             zoomMax: opts.zoomMax || 20,
@@ -172,12 +179,12 @@ class Earth extends EventEmitter {
     }
 
     private initCavnasAndCamera = (): void => {
-        const c = this.origin.center, r = this.devicePixelRatio;
-        const w = this.width, h = this.height, rw = r * w, rh = r * h;
-        this.canvas.width = rw;
-        this.canvas.height = rh;
-        this.canvas.style.width = `${w}px`;
-        this.canvas.style.height = `${h}px`;
+        const c = this.origin_.center, r = this.devicePixelRatio_;
+        const w = this.width_, h = this.height_, rw = r * w, rh = r * h;
+        this.canvas_.width = rw;
+        this.canvas_.height = rh;
+        this.canvas_.style.width = `${w}px`;
+        this.canvas_.style.height = `${h}px`;
         this.registerCamera(c);
     }
 
@@ -192,14 +199,28 @@ class Earth extends EventEmitter {
         // this.EnableCursorAuxTool();
     }
 
+    private getUUID() {
+        return `${this.entity_uuid_++}`;
+    }
+
     /**
-     * 添加图层到地球场景进行渲染
-     * @param skpd 
+     * @param EntityConstructor 
+     * @returns 
      */
-    public createEntity = <T extends BaseEntity>(skpd: Sketchpad<T>) => {
-        this.sketchpads.push(skpd);
-        skpd.attach(this);
-        this.updateQuadtreeTileByDistanceError();
+    public createEntity = <T extends BaseEntity>(
+        EntityConstructor: new (uuid: string) => T = BaseEntity as unknown as new (uuid: string) => T
+    ): T => {
+        const uuid: string = this.getUUID();
+        const entity = new EntityConstructor(uuid);
+        if (!(entity instanceof BaseEntity)) {
+            throw new Error(`[E][createEntity] create entity error. constructor is not child of 'BaseEntity'.`);
+        }
+        if (!this.entities_.some(existEntity => existEntity.UUID === uuid)) {
+            this.entities_.push(entity);
+        } else {
+            console.warn(`[W][createEntity] eneity uuid: ${uuid} already exists. duplicate addition is unnecessary.`);
+        }
+        return entity;
     }
 }
 

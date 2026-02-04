@@ -137,7 +137,7 @@ Earth.prototype.computeLevelTiles = function (level: number): QuadtreeTile[] {
  */
 Earth.prototype.computeMaximumGeometricError = function (level: number): number {
     const g = this as Earth;
-    const maximumGeometricError = this.ellipsoid.MaximumRadius * Math.PI * 0.5 / (65 * g._state_quadtree_.quadtreeTileSchema.getNumberOfXTilesAtLevel(level));
+    const maximumGeometricError = this.ellipsoid_.MaximumRadius * Math.PI * 0.5 / (65 * g._state_quadtree_.quadtreeTileSchema.getNumberOfXTilesAtLevel(level));
     return maximumGeometricError;
 }
 
