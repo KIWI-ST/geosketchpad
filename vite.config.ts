@@ -3,8 +3,7 @@ import type { UserConfig } from 'vite';
 export default {
     base: './',
     server: {
-        port: 4080,
-        strictPort: true
+        port: 10086
     },
     build: {
         outDir: 'build',
@@ -12,7 +11,6 @@ export default {
             input: {
                 main: './index.html'
             }
-        },
-        sourcemap: true,
+        }
     }
 } satisfies UserConfig;
