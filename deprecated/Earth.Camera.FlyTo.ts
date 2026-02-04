@@ -1,13 +1,12 @@
 import { GeodeticCoordinate } from "@pipegpu/geography";
 import { Easing, Tween } from "@pipegpu/camera";
-
-import { Globe } from "../Globe";
+import { Earth } from "../Earth";
 
 /**
  * @class Globe
  */
-declare module './../Globe' {
-    interface Globe {
+declare module '../Earth' {
+    interface Earth {
         /**
          * 
          * @param coord 
@@ -21,8 +20,8 @@ declare module './../Globe' {
 /**
  * 
  */
-Globe.prototype.flyTo = function (coord: GeodeticCoordinate, zoom: number, duration: number): void {
-    const g = this as Globe, center = g.Origin.center.toGeodetic(), viewCenter = g._state_camera_.viewCenter;
+Earth.prototype.flyTo = function (coord: GeodeticCoordinate, zoom: number, duration: number): void {
+    const g = this as Earth, center = g.Origin.center.toGeodetic(), viewCenter = g._state_camera_.viewCenter;
     //旋转的起点和终点
     const p1 = coord.toGeodetic();
     const camera = g._state_camera_.camera, target = g._state_camera_.camera.Target;

@@ -1,4 +1,4 @@
-import { Globe } from "../globe/Globe";
+import { Earth } from "../Earth";
 import type { IRendererOS } from "../render/IRendererOS";
 import { Renderable } from "../render/Renderable";
 
@@ -23,7 +23,7 @@ class Sketchpad<T extends TSketchpadDataSchema> extends Renderable {
     /** 
      * globe 
      */
-    protected g?: Globe;
+    protected g?: Earth;
 
     /**
      * 离屏渲染对象 
@@ -61,7 +61,7 @@ class Sketchpad<T extends TSketchpadDataSchema> extends Renderable {
      * @example sptachpad.attach(globe);
      * @param globe 
      */
-    public attach(globe: Globe): void {
+    public attach(globe: Earth): void {
         this.g = globe;
         const clazz = this.getRegisterRender(this.constructor.name);
         this.renderer = new clazz(this, globe.getContext3D()) as IRendererOS<T>;

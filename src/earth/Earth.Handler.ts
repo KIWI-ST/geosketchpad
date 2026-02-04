@@ -1,7 +1,6 @@
-import { Globe } from './Globe';
-
-import { addDOMEvent, preventDefault } from '../core/dom';
-import { now } from '../core/now';
+import { Earth } from '../Earth';
+import { addDOMEvent, preventDefault } from '../util/dom';
+import { now } from '../util/now';
 import type { IDOMEventParam } from '@pipegpu/camera';
 
 /**
@@ -34,8 +33,8 @@ const DOM_EVENT_TYPES =
  * https://www.tslang.cn/docs/handbook/declaration-merging.html
  * https://github.com/maptalks/maptalks.js/blob/master/src/map/Map.DomEvents.js
  */
-declare module './Globe' {
-    interface Globe {
+declare module '../Earth' {
+    interface Earth {
         /**
          * 
          */
@@ -67,7 +66,7 @@ declare module './Globe' {
          * 
          * @param e 
          */
-        getActualEvent(e: Event): boolean;
+        getActualEvent(e: Event): Event | Touch;
 
         /**
          * 
@@ -81,8 +80,8 @@ declare module './Globe' {
 /**
  * 统一注册DOM事件
  */
-Globe.prototype.registerDOMEventsHook = function () {
-    const g = this as Globe;
+Earth.prototype.registerDOMEventsHook = function () {
+    const g = this as Earth;
     g._state_handler_dom_ = {
         mouseDownTime: 0
     };
@@ -93,8 +92,8 @@ Globe.prototype.registerDOMEventsHook = function () {
 /**
  * 单个DOM事件过滤
  */
-Globe.prototype.onDOMEvent = function (element: HTMLElement, eventName: string, handler: Function, context: object): void {
-    const g = this as Globe;
+Earth.prototype.onDOMEvent = function (element: HTMLElement, eventName: string, handler: Function, context: object): void {
+    const g = this as Earth;
     addDOMEvent(element, DOM_EVENT_TYPES, g.handleDOMEvent, g);
 }
 
@@ -104,15 +103,17 @@ Globe.prototype.onDOMEvent = function (element: HTMLElement, eventName: string, 
  * 2. 模拟doble click
  * 3. 统一处理touch，clcik
  */
-Globe.prototype.handleDOMEvent = function (e: Event): void {
-    const g = this as Globe;
+Earth.prototype.handleDOMEvent = function (e: Event): void {
+    const g = this as Earth;
     let type = e.type;
     //prevent default context menu
-    if (type === 'contextmenu')
+    if (type === 'contextmenu') {
         preventDefault(e);
+    }
     //ignore click lasted for more than 300ms
-    if (type === 'mousedown' || (type === 'touchstart' && (!e['touches'] || e['touches'].length === 1)))
+    if (type === 'mousedown' || (type === 'touchstart' && (e instanceof TouchEvent && (!e.touches || e.touches.length === 1)))) {
         g._state_handler_dom_.mouseDownTime = now();
+    }
     else if (type === 'click' || type === 'touchend' || type === 'contextmenu') {
         //mousedown | touchstart propogation is stopped
         //ignore the click/touchend/contextmenu
@@ -132,7 +133,7 @@ Globe.prototype.handleDOMEvent = function (e: Event): void {
             }
 
         }
-    } else if (type === 'wheel' || (e['touches'] && e['touches'].length === 2)) {
+    } else if (type === 'wheel' || (e instanceof TouchEvent && (e.touches && e.touches.length === 2))) {
         type = 'zoom';
     }
     //发送事件
@@ -142,15 +143,14 @@ Globe.prototype.handleDOMEvent = function (e: Event): void {
 /**
  * 
  */
-Globe.prototype.parseEvent = function (e: TouchEvent | MouseEvent, type: string): IDOMEventParam {
+Earth.prototype.parseEvent = function (e: TouchEvent | MouseEvent, type: string): IDOMEventParam {
     const DOMEventParam: IDOMEventParam = {
         domEvent: e
     };
     if (!e) {
         return DOMEventParam;
     }
-    const ctx = this as Globe;
-
+    const ctx = this as Earth;
     if (type !== 'keypress' && ctx.getActualEvent(e)) {
         // const containerPoint = getEventContainerPoint(actual, this._containerDOM);
         // DOMEventParam = extend(DOMEventParam, {
@@ -166,9 +166,15 @@ Globe.prototype.parseEvent = function (e: TouchEvent | MouseEvent, type: string)
 /**
  * 
  */
-Globe.prototype.getActualEvent = function (e: Event): boolean {
-    return e['touches'] && e['touches'].length > 0 ? e['touches'][0] : e['changedTouches'] && e['changedTouches'].length > 0 ? e['changedTouches'][0] : e;
+Earth.prototype.getActualEvent = function (e: Event): Event | Touch {
+    if (e instanceof TouchEvent && e.touches && e.touches.length > 0) {
+        return e.touches[0];
+    }
+    if (e instanceof TouchEvent && e.changedTouches && e.changedTouches.length > 0) {
+        return e.changedTouches[0];
+    }
+    return e;
 }
 
 //钩子，handler插件需要预执行的方法注册到钩子里
-Globe.registerHook(Globe.prototype.registerDOMEventsHook);
+Earth.registerHook(Earth.prototype.registerDOMEventsHook);

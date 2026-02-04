@@ -1,17 +1,15 @@
-
 import { mat4, vec3, type Vec3 } from 'wgpu-matrix';
 import { Ray, type GeodeticCoordinate } from '@pipegpu/geography';
 import { type IClientPoint, type IViewContainer, PerspectiveCamera } from '@pipegpu/camera';
-
-import { Globe } from './Globe';
+import { Earth } from '../Earth';
 
 /**
  * View支持，在Camear下支持
  * -LOD
  * -坐标转换(ndc，大地坐标，空间坐标等)
  */
-declare module './Globe' {
-    interface Globe {
+declare module './../Earth' {
+    interface Earth {
         /**
          * 
          * @param coord 
@@ -69,8 +67,8 @@ declare module './Globe' {
 /**
  * 相机注册
  */
-Globe.prototype.registerCamera = function (coord: GeodeticCoordinate): void {
-    const g = this as Globe;
+Earth.prototype.registerCamera = function (coord: GeodeticCoordinate): void {
+    const g = this as Earth;
     //1. 获取element信息
     const box = g.Canvas.getBoundingClientRect(), dom = g.Canvas.ownerDocument.documentElement;
     //2. 获取view信息
@@ -108,8 +106,8 @@ Globe.prototype.registerCamera = function (coord: GeodeticCoordinate): void {
 /**
  * 获取屏幕坐标与空间坐标(0,0,0)连线，与参考椭球体表面相交点坐标
  */
-Globe.prototype.rayTrackOnSphere = function (point: IClientPoint): Vec3 {
-    const g = this as Globe;
+Earth.prototype.rayTrackOnSphere = function (point: IClientPoint): Vec3 {
+    const g = this as Earth;
     const pndc = g.normalizedDeviceCoordinate(point);
     const space = g.normalizedDeviceCoordinateToSpaceCoordinate(pndc);
     const d = vec3.normalize(vec3.sub(space, g._state_camera_.camera.Position));
@@ -121,8 +119,8 @@ Globe.prototype.rayTrackOnSphere = function (point: IClientPoint): Vec3 {
  * 通过ClientX,ClientY换算成设备的NDC坐标
  * 输入容器中client坐标
  */
-Globe.prototype.normalizedDeviceCoordinate = function (point: IClientPoint): Vec3 {
-    const g = this as Globe;
+Earth.prototype.normalizedDeviceCoordinate = function (point: IClientPoint): Vec3 {
+    const g = this as Earth;
     const x = (point.clientX / g._state_camera_.viewContainer.width) * 2 - 1,
         y = -(point.clientY / g._state_camera_.viewContainer.height) * 2 + 1;
     return vec3.create(x, y, 1);
@@ -132,8 +130,8 @@ Globe.prototype.normalizedDeviceCoordinate = function (point: IClientPoint): Vec
  * ndc坐标换算成空间坐标
  * @description https://github.com/pipegpu/pipegpu.matrix/blob/8f734f948e79df7fce7664d20274d1769719259a/src/matrix/Vec3.ts#L516C1-L524C6
  */
-Globe.prototype.normalizedDeviceCoordinateToSpaceCoordinate = function (pndc: Vec3): Vec3 {
-    const g = this as Globe;
+Earth.prototype.normalizedDeviceCoordinateToSpaceCoordinate = function (pndc: Vec3): Vec3 {
+    const g = this as Earth;
     const m4 = mat4.invert(mat4.multiply(g._state_camera_.camera.ViewMatrix, g._state_camera_.camera.ProjectionMatrix));
     return vec3.transformMat4(pndc, m4);
 }
@@ -141,23 +139,23 @@ Globe.prototype.normalizedDeviceCoordinateToSpaceCoordinate = function (pndc: Ve
 /**
  * space coordinate 转换成屏幕NDC坐标
  */
-Globe.prototype.spaceCoordinateToNormaziledDeveiceCoordinate = function (space: Vec3): Vec3 {
-    const g = this as Globe;
+Earth.prototype.spaceCoordinateToNormaziledDeveiceCoordinate = function (space: Vec3): Vec3 {
+    const g = this as Earth;
     return vec3.transformMat4(space, g._state_camera_.camera.ViewProjectionMatrix);
 }
 
 /**
  * 大地坐标转换成空间坐标
  */
-Globe.prototype.geographicToSpaceCoordinate = function (coord: GeodeticCoordinate): Vec3 {
-    const g = this as Globe;
+Earth.prototype.geographicToSpaceCoordinate = function (coord: GeodeticCoordinate): Vec3 {
+    const g = this as Earth;
     return g.Ellipsoid.geographicToSpace(coord);
 }
 
 /**
  * 空间坐标转大地坐标（投影到地球表面）
  */
-Globe.prototype.spaceCoordinateToGeographic = function (spaceCoord: Vec3): GeodeticCoordinate {
-    const g = this as Globe;
+Earth.prototype.spaceCoordinateToGeographic = function (spaceCoord: Vec3): GeodeticCoordinate {
+    const g = this as Earth;
     return g.Ellipsoid.spaceToGeographic(spaceCoord);
 }

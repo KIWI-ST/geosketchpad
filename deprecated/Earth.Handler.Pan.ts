@@ -1,17 +1,15 @@
-
 import { vec2, type Vec2 } from 'wgpu-matrix';
 import { END_EVENTS, MOVE_EVENTS, PAN_EVENTS, START_EVENTS, type IDOMEventParam, type IPanEventParam } from '@pipegpu/camera';
-
-import { Globe } from './../Globe';
-import { split } from '../../core/split';
-import { getEventContainerPosition } from '../../core/dom';
+import { Earth } from '../Earth';
+import { split } from '../util/split';
+import { getEventContainerPosition } from '../util/dom';
 
 /**
  * 参考
  * 提供Global的Pan事件发布
  */
-declare module './../Globe' {
-    interface Globe {
+declare module '../Earth' {
+    interface Earth {
         /**
          * 注册到hook的初始化执行钩子
          */
@@ -55,8 +53,8 @@ declare module './../Globe' {
 /**
  * 
  */
-Globe.prototype.registerPanHandlerHood = function (): void {
-    const g = this as Globe;
+Earth.prototype.registerPanHandlerHood = function (): void {
+    const g = this as Earth;
     g._state_handler_pan_ = {
         startPosition: vec2.create(),
         moved: false,
@@ -70,8 +68,8 @@ Globe.prototype.registerPanHandlerHood = function (): void {
 /**
  * mousedown 或 touchstart 事件开始
  */
-Globe.prototype.panMousedownOrTouchstart = function (args: IDOMEventParam): void {
-    const g = this as Globe, e = args.domEvent;
+Earth.prototype.panMousedownOrTouchstart = function (args: IDOMEventParam): void {
+    const g = this as Earth, e = args.domEvent;
     //右键或多点触控，不分发事件
     if ((e instanceof MouseEvent && e.button === 2) || (e instanceof TouchEvent && e.touches && e.touches.length > 1)) {
         return;
@@ -96,8 +94,8 @@ Globe.prototype.panMousedownOrTouchstart = function (args: IDOMEventParam): void
 /**
  * 平移中
  */
-Globe.prototype.panMousemoveOrTouchmove = function (args: IDOMEventParam): void {
-    const g = this as Globe, e = args.domEvent;
+Earth.prototype.panMousemoveOrTouchmove = function (args: IDOMEventParam): void {
+    const g = this as Earth, e = args.domEvent;
     if (e instanceof TouchEvent && e.touches && e.touches.length > 1) {
         if (g._state_handler_pan_.moved) {
             g._state_handler_pan_.interupted = true;
@@ -125,8 +123,8 @@ Globe.prototype.panMousemoveOrTouchmove = function (args: IDOMEventParam): void 
 /**
  * 平移结束
  */
-Globe.prototype.panMouseupOrTouchend = function (args: IDOMEventParam): void {
-    const g = this as Globe, e = args.domEvent;
+Earth.prototype.panMouseupOrTouchend = function (args: IDOMEventParam): void {
+    const g = this as Earth, e = args.domEvent;
     g.releasePanHandlerEvents();
     const cp = getEventContainerPosition(e, g.Canvas);
     const panEventParam: IPanEventParam = {
@@ -142,8 +140,8 @@ Globe.prototype.panMouseupOrTouchend = function (args: IDOMEventParam): void {
 /**
  * 清除所有pan操作
  */
-Globe.prototype.releasePanHandlerEvents = function (): void {
-    const g = this as Globe;
+Earth.prototype.releasePanHandlerEvents = function (): void {
+    const g = this as Earth;
     for (const key in MOVE_EVENTS) {
         const moveEventName = MOVE_EVENTS[key];
         const endEventName = END_EVENTS[key];
@@ -153,4 +151,4 @@ Globe.prototype.releasePanHandlerEvents = function (): void {
 }
 
 //注册Pan插件
-Globe.registerHook(Globe.prototype.registerPanHandlerHood);
+Earth.registerHook(Earth.prototype.registerPanHandlerHood);

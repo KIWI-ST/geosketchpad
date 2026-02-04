@@ -1,5 +1,4 @@
 import { GeodeticCoordinate } from "@pipegpu/geography";
-import { Globe } from "./src";
 
 (async () => {
 
@@ -13,7 +12,7 @@ import { Globe } from "./src";
 
     await earth.init();
 
-});
+})();
 
 
 

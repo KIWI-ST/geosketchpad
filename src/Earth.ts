@@ -1,10 +1,9 @@
 
 import { EventEmitter } from '@pipegpu/camera';
 import { WebMercatorProjection, type Ellipsoid, type GeodeticCoordinate, type Projection } from '@pipegpu/geography';
-
-import { isString } from '../core/isString';
-import type { IRenderer } from '../render/IRenderer';
-import type { Sketchpad, TSketchpadDataSchema } from '../sketchpad/Sektchpad';
+import { isString } from './util/isString';
+// import type { IRenderer } from './render/IRenderer';
+import type { Sketchpad, TSketchpadDataSchema } from './Sektchpad';
 
 /**
  * @class Globe
@@ -13,7 +12,7 @@ import type { Sketchpad, TSketchpadDataSchema } from '../sketchpad/Sektchpad';
  * const g = new Globe();
  * await g.init();
  */
-class Globe extends EventEmitter {
+class Earth extends EventEmitter {
     /**
     * Global启动时执行的钩子
     */
@@ -24,7 +23,7 @@ class Globe extends EventEmitter {
      * @param args 
      */
     static registerHook(func: Function, ...args: any[]) {
-        Globe.hooks.push({ func, args });
+        Earth.hooks.push({ func, args });
     }
 
     /**
@@ -68,12 +67,8 @@ class Globe extends EventEmitter {
     protected height: number;
 
     /**
-     * Globe总渲染器，调度入口
-     */
-    protected renderer?: IRenderer;
-
-    /**
      * 装载到场景的可渲染对象集合
+     * @todo ecs entities
      */
     private sketchpads: Sketchpad<TSketchpadDataSchema>[] = [];
 
@@ -187,7 +182,7 @@ class Globe extends EventEmitter {
     }
 
     private initHooks = (): void => {
-        Globe.hooks?.forEach(hook => {
+        Earth.hooks?.forEach(hook => {
             const { func, args } = hook;
             func.apply(this, args);
         });
@@ -201,11 +196,13 @@ class Globe extends EventEmitter {
      * 添加图层到地球场景进行渲染
      * @param skpd 
      */
-    public add = <T extends TSketchpadDataSchema>(skpd: Sketchpad<T>) => {
+    public createEntity = <T extends BaseEntity>(skpd: Sketchpad<T>) => {
         this.sketchpads.push(skpd);
         skpd.attach(this);
         this.updateQuadtreeTileByDistanceError();
     }
 }
 
-export { Globe }
+export {
+    Earth
+}

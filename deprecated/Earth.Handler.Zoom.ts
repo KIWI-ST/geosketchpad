@@ -1,8 +1,7 @@
-import { Globe } from "../Globe";
-
-import { getEventContainerPosition, preventDefault, stopPropagation } from "../../core/dom";
 import { ZOOM_EVENTS, type IClientPoint, type IDOMEventParam, type IZoomEventParam } from "@pipegpu/camera";
-import { now } from "../../core/now";
+import { Earth } from "../Earth";
+import { getEventContainerPosition, preventDefault, stopPropagation } from "../util/dom";
+import { now } from "../util/now";
 
 //参考
 const wheelZoomDelta = 4.000244140625;
@@ -10,8 +9,8 @@ const wheelZoomDelta = 4.000244140625;
 /**
  * 
  */
-declare module './../Globe' {
-    interface Globe {
+declare module "../Earth" {
+    interface Earth {
         /**
          * 注册到hook, 初始执行
          */
@@ -33,7 +32,7 @@ declare module './../Globe' {
          * @param e 
          * @param g 
          */
-        processZoomWheel(e: WheelEvent, g: Globe): void;
+        processZoomWheel(e: WheelEvent, g: Earth): void;
 
         /**
          * zoom状态
@@ -55,8 +54,8 @@ declare module './../Globe' {
 /**
  * 
  */
-Globe.prototype.registerZoomHandlerHook = function (): void {
-    const g = this as Globe;
+Earth.prototype.registerZoomHandlerHook = function (): void {
+    const g = this as Earth;
     g._state_handler_zoom_ = {
         lastWheelTime: 0,
         onceWheelCount: 0,
@@ -73,16 +72,16 @@ Globe.prototype.registerZoomHandlerHook = function (): void {
 /**
  * 
  */
-Globe.prototype.releaseZoomHandlerEvents = function (): void {
-    const g = this as Globe;
+Earth.prototype.releaseZoomHandlerEvents = function (): void {
+    const g = this as Earth;
     g.off('zoom', g.zoomMousewheelOrTouch, g);
 }
 
 /**
  * 
  */
-Globe.prototype.zoomMousewheelOrTouch = function (args: IDOMEventParam): void {
-    const g = this as Globe, e = args.domEvent;
+Earth.prototype.zoomMousewheelOrTouch = function (args: IDOMEventParam): void {
+    const g = this as Earth, e = args.domEvent;
     preventDefault(e);
     stopPropagation(e);
     if (e.type === 'wheel' && !g._state_handler_zoom_.zooming) {
@@ -103,7 +102,7 @@ Globe.prototype.zoomMousewheelOrTouch = function (args: IDOMEventParam): void {
 /**
  * 
  */
-Globe.prototype.processZoomWheel = function (e: WheelEvent, g: Globe): void {
+Earth.prototype.processZoomWheel = function (e: WheelEvent, g: Earth): void {
     const currentPosition = getEventContainerPosition(e, g.Canvas);
     const zoomEventParam: IZoomEventParam = {
         domEvent: e,
@@ -138,4 +137,4 @@ Globe.prototype.processZoomWheel = function (e: WheelEvent, g: Globe): void {
     g.emit(ZOOM_EVENTS.wheel, zoomEventParam);
 }
 
-Globe.registerHook(Globe.prototype.registerZoomHandlerHook);
+Earth.registerHook(Earth.prototype.registerZoomHandlerHook);

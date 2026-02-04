@@ -1,6 +1,5 @@
 import { InitHDMFV1Worker, InitRGBAWorker, LongtermWorkerPool, WorkerLib, type IMessagebus } from "@pipegpu/worker";
-
-import { Globe } from "./Globe";
+import { Earth } from "../Earth";
 
 /**
  * @description webworker注册机制构建
@@ -15,8 +14,8 @@ type LongtermWorkerTYPE = 'HDMFV1Worker' | 'RGBAWorker';
 /**
  *
  */
-declare module './Globe' {
-    interface Globe {
+declare module '../Earth' {
+    interface Earth {
         /**
          *
          */
@@ -37,22 +36,22 @@ declare module './Globe' {
     }
 }
 
-Globe.prototype.registerGlobeWorker = function () {
+Earth.prototype.registerGlobeWorker = function () {
     WorkerLib.Instance.setWorker(`HDMFV1Worker`, InitHDMFV1Worker);
     LongtermWorkerPool.workerInit([`HDMFV1Worker`], 2);
     WorkerLib.Instance.setWorker(`RGBAWorker`, InitRGBAWorker);
     LongtermWorkerPool.workerInit([`RGBAWorker`], 2);
 }
 
-Globe.prototype.hasIdleWorker = function (workerType: LongtermWorkerTYPE): boolean {
+Earth.prototype.hasIdleWorker = function (workerType: LongtermWorkerTYPE): boolean {
     return LongtermWorkerPool.hasIdleWorker(workerType);
 }
 
-Globe.prototype.acquireWorker = function (workerType: LongtermWorkerTYPE, msg: IMessagebus): Promise<IMessagebus> | null {
+Earth.prototype.acquireWorker = function (workerType: LongtermWorkerTYPE, msg: IMessagebus): Promise<IMessagebus> | null {
     return LongtermWorkerPool.acquireWorker(workerType, msg);
 }
 
-Globe.registerHook(Globe.prototype.registerGlobeWorker);
+Earth.registerHook(Earth.prototype.registerGlobeWorker);
 
 export {
     type LongtermWorkerTYPE

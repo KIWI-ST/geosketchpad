@@ -1,13 +1,12 @@
 import { PAN_EVENTS, type IClientPoint, type IPanEventParam } from '@pipegpu/camera';
 import { quat, vec3, type Quat, type Vec3 } from 'wgpu-matrix';
-
-import { Globe } from '../Globe';
+import { Earth } from '../Earth';
 
 /**
  * 
  */
-declare module './../Globe' {
-    interface Globe {
+declare module '../Earth' {
+    interface Earth {
         /**
          * 
          */
@@ -60,8 +59,8 @@ declare module './../Globe' {
 /**
  * 
  */
-Globe.prototype.registerCameraPan = function (): void {
-    const g = this as Globe;
+Earth.prototype.registerCameraPan = function (): void {
+    const g = this as Earth;
     g._state_pan_ = {
         paning: false,
         m_lastRotateGlobeFromVector: vec3.create(),
@@ -80,10 +79,10 @@ Globe.prototype.registerCameraPan = function (): void {
  * fm, 起始：鼠标与中心连线，与地球表明相交的点的空间坐标Vec3
  * to, 终止：鼠标与中心连线，与地球表明相交的点的空间坐标Vec3
  */
-Globe.prototype.panFromTo = function (fm: Vec3, to: Vec3): void {
+Earth.prototype.panFromTo = function (fm: Vec3, to: Vec3): void {
     //空的起点和终点取消操作
     if (fm == null || to == null) return;
-    const g = this as Globe;
+    const g = this as Earth;
     // Assign the new animation start time.
     g._state_pan_.m_lastRotateGlobeFromVector = vec3.clone(fm);
     g._state_pan_.m_lastRotateGlobeAxis = vec3.normalize(vec3.cross(fm, to));
@@ -100,8 +99,8 @@ Globe.prototype.panFromTo = function (fm: Vec3, to: Vec3): void {
 /**
  * 
  */
-Globe.prototype.onPanStart = function (panParam: IPanEventParam): void {
-    const g = this as Globe, cp = panParam.currentPosition;
+Earth.prototype.onPanStart = function (panParam: IPanEventParam): void {
+    const g = this as Earth, cp = panParam.currentPosition;
     g._state_pan_.paning = true;
     g._state_pan_.m_lastPostition = {
         clientX: cp?.clientX || 0,
@@ -112,8 +111,8 @@ Globe.prototype.onPanStart = function (panParam: IPanEventParam): void {
 /**
  * 
  */
-Globe.prototype.onPaning = function (panParam: IPanEventParam): void {
-    const g = this as Globe, cp = panParam.currentPosition;
+Earth.prototype.onPaning = function (panParam: IPanEventParam): void {
+    const g = this as Earth, cp = panParam.currentPosition;
     const tc = {
         clientX: cp?.clientX || 0,
         clientY: cp?.clientY || 0,
@@ -130,11 +129,11 @@ Globe.prototype.onPaning = function (panParam: IPanEventParam): void {
 /**
  * 
  */
-Globe.prototype.onPanend = function (args: IPanEventParam): void {
-    const g = this as Globe;
+Earth.prototype.onPanend = function (args: IPanEventParam): void {
+    const g = this as Earth;
     g._state_pan_.paning = false;
     g.updateQuadtreeTileByDistanceError();
 }
 
 //
-Globe.registerHook(Globe.prototype.registerCameraPan);
+Earth.registerHook(Earth.prototype.registerCameraPan);

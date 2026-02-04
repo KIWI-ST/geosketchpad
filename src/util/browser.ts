@@ -104,4 +104,6 @@ if (!isNode) {
     };
 }
 
-export { browser }
+export {
+    browser
+}

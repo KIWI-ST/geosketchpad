@@ -1,7 +1,5 @@
-
-
 import { QuadtreeTile, webMercatorTileSchema, type QuadtreeTileSchema } from '@pipegpu/geography';
-import { Globe } from './Globe';
+import { Earth } from '../Earth';
 import { vec3, type Vec3 } from 'wgpu-matrix';
 
 //控制瓦片精细程度，值越高越粗糙
@@ -11,8 +9,8 @@ const MAXIMUM_SCREEN_SPACEERROR = 2.0;
  * 瓦片四叉树结构
  * 配合PersepcetiveCamera构建
  */
-declare module './Globe' {
-    interface Globe {
+declare module '../Earth' {
+    interface Earth {
         /**
          * 四叉树初始化（z序列索引）
          * @param tileSchema 
@@ -76,8 +74,8 @@ declare module './Globe' {
 /**
  * 
  */
-Globe.prototype.registerQuadtree = function (tileSchema: QuadtreeTileSchema): void {
-    const g = this as Globe, c = g.Origin.center, z = g.Origin.zoom;
+Earth.prototype.registerQuadtree = function (tileSchema: QuadtreeTileSchema): void {
+    const g = this as Earth, c = g.Origin.center, z = g.Origin.zoom;
     //初始参数构造
     g._state_quadtree_ = {
         maximumScreenSpaceError: MAXIMUM_SCREEN_SPACEERROR,
@@ -109,16 +107,16 @@ Globe.prototype.registerQuadtree = function (tileSchema: QuadtreeTileSchema): vo
 /**
  * 简化：计算0级瓦片集
  */
-Globe.prototype.computeZeroLevelTiles = function (): QuadtreeTile[] {
-    const g = this as Globe;
+Earth.prototype.computeZeroLevelTiles = function (): QuadtreeTile[] {
+    const g = this as Earth;
     return g.computeLevelTiles(0);
 }
 
 /**
  * 计算指定缩放层级的全部瓦片
  */
-Globe.prototype.computeLevelTiles = function (level: number): QuadtreeTile[] {
-    const g = this as Globe;
+Earth.prototype.computeLevelTiles = function (level: number): QuadtreeTile[] {
+    const g = this as Earth;
     const quadtreeTileSchema = g._state_quadtree_.quadtreeTileSchema,
         numberOfLevelZeroTilesX = quadtreeTileSchema.getNumberOfXTilesAtLevel(level),
         numberOfLevelZeroTilesY = quadtreeTileSchema.getNumberOfYTilesAtLevel(level),
@@ -137,8 +135,8 @@ Globe.prototype.computeLevelTiles = function (level: number): QuadtreeTile[] {
  * 周长：2*PI*r
  * 像素：256 * num
  */
-Globe.prototype.computeMaximumGeometricError = function (level: number): number {
-    const g = this as Globe;
+Earth.prototype.computeMaximumGeometricError = function (level: number): number {
+    const g = this as Earth;
     const maximumGeometricError = this.ellipsoid.MaximumRadius * Math.PI * 0.5 / (65 * g._state_quadtree_.quadtreeTileSchema.getNumberOfXTilesAtLevel(level));
     return maximumGeometricError;
 }
@@ -146,8 +144,8 @@ Globe.prototype.computeMaximumGeometricError = function (level: number): number 
 /**
  * 
  */
-Globe.prototype.pickZeroLevelQuadtreeTiles = function (position: Vec3): Array<QuadtreeTile> {
-    const g = this as Globe;
+Earth.prototype.pickZeroLevelQuadtreeTiles = function (position: Vec3): Array<QuadtreeTile> {
+    const g = this as Earth;
     //修复issue2 问题
     if (g._state_quadtree_.quadtreeTileSchema === webMercatorTileSchema) {
         return g._state_quadtree_.zeroLevelTiles;
@@ -167,8 +165,8 @@ Globe.prototype.pickZeroLevelQuadtreeTiles = function (position: Vec3): Array<Qu
 /**
  * 根据摄像机的位置计算地球上的瓦片对应的spaceError
  */
-Globe.prototype.computeSpaceError = function (quadtreeTile: QuadtreeTile): number {
-    const g = this as Globe;
+Earth.prototype.computeSpaceError = function (quadtreeTile: QuadtreeTile): number {
+    const g = this as Earth;
     // 摄像机位置与瓦片中心的距离,距离由两部分构成
     // 1.相机在椭球体上的投影点
     const level = quadtreeTile.Level,
@@ -185,13 +183,13 @@ Globe.prototype.computeSpaceError = function (quadtreeTile: QuadtreeTile): numbe
 /**
  * 对应缩放层级支持的摄像机最大高程
  */
-Globe.prototype.getMaximumCameraHeightByLevel = function (level: number): number {
-    const g = this as Globe;
+Earth.prototype.getMaximumCameraHeightByLevel = function (level: number): number {
+    const g = this as Earth;
     return g._state_quadtree_.maximumCameraHeight[level];
 }
 
-Globe.prototype.updateQuadtreeTileByDistanceError = function (): void {
-    const g = this as Globe;
+Earth.prototype.updateQuadtreeTileByDistanceError = function (): void {
+    const g = this as Earth;
     const position = vec3.clone(g._state_camera_.camera.Position);
     let level = 0;
     const rootTiles = g.pickZeroLevelQuadtreeTiles(position);
@@ -229,4 +227,4 @@ Globe.prototype.updateQuadtreeTileByDistanceError = function (): void {
 }
 
 //注册web墨卡托瓦片规则
-Globe.registerHook(Globe.prototype.registerQuadtree, webMercatorTileSchema);
+Earth.registerHook(Earth.prototype.registerQuadtree, webMercatorTileSchema);

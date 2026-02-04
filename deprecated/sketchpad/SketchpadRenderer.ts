@@ -1,6 +1,4 @@
-import { PipeGL } from "pipegl";
-
-import { Globe } from "./../globe/Globe";
+import { Earth } from "../Earth";
 
 import { IRendererOS } from "../render/IRendererOS";
 import { PerspectiveCamera } from "../camera/PerspectiveCamera";
@@ -25,7 +23,7 @@ class SketchpadRenderer<T extends TSketchpadDataSchema> implements IRendererOS<T
     /**
      * 
      */
-    protected g: Globe;
+    protected g: Earth;
 
     /**
      * 
@@ -69,7 +67,7 @@ class SketchpadRenderer<T extends TSketchpadDataSchema> implements IRendererOS<T
     public render(framestamp: number, camera: PerspectiveCamera): void {
         throw new Error("Method not implemented.");
     }
-    
+
 }
 
 //注册渲染方法

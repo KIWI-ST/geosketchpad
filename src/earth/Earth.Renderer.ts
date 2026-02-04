@@ -1,16 +1,15 @@
 import { Context } from '@pipegpu/core';
-
-import { Globe } from './Globe';
+import { Earth } from '../Earth';
 import type { IContextOpts } from '@pipegpu/core/src/compile/parseContextDesc';
 import { TweenCache } from '@pipegpu/camera';
-import { RAF } from '../core/raf';
+import { RAF } from '../util/raf';
 
 /**
  * @class Globe
  * @description globe renderer, system 'tick' in each frame.
  */
-declare module './Globe' {
-    interface Globe {
+declare module '../Earth' {
+    interface Earth {
         /**
          * 注册全局渲染
          */
@@ -73,8 +72,8 @@ declare module './Globe' {
 /**
  * 
  */
-Globe.prototype.registerGlobeRenderer = async function (opts: IContextOpts) {
-    const g = this as Globe;
+Earth.prototype.registerGlobeRenderer = async function (opts: IContextOpts) {
+    const g = this as Earth;
     // 1.实际canvas使用ctx2d绘制
     //-支持每秒不超过50000次draw call调用
     //-支持贴图叠加
@@ -90,23 +89,23 @@ Globe.prototype.registerGlobeRenderer = async function (opts: IContextOpts) {
 /**
  * 3D渲染上下文
  */
-Globe.prototype.getContext3D = function (): Context {
-    const g = this as Globe;
+Earth.prototype.getContext3D = function (): Context {
+    const g = this as Earth;
     return g._state_globerender_.ctx3d;
 }
 
 /**
  * 
  */
-Globe.prototype.render = function (): void {
-    const g = this as Globe;
+Earth.prototype.render = function (): void {
+    const g = this as Earth;
     g.renderLoop(0);
 }
 
 /**
  * 动画任务调起
  */
-Globe.prototype.callAnimate = function (framestamp: number): void {
+Earth.prototype.callAnimate = function (framestamp: number): void {
     const arr: Function[] = [];
     TweenCache.forEach(fn => arr.push(fn));
     TweenCache.clear();
@@ -120,24 +119,24 @@ Globe.prototype.callAnimate = function (framestamp: number): void {
 /**
  * 发起辅助工具更新
  */
-Globe.prototype.callAuxtool = function (framestamp: number): void {
-    const g = this as Globe;
+Earth.prototype.callAuxtool = function (framestamp: number): void {
+    const g = this as Earth;
     g.emit('auxtool', framestamp);
 }
 
 /**
  * 发起多线程任务
  */
-Globe.prototype.callWorker = function (framestamp: number): void {
-    const g = this as Globe;
+Earth.prototype.callWorker = function (framestamp: number): void {
+    const g = this as Earth;
     g.emit('worker', framestamp);
 }
 
 /**
  * 
  */
-Globe.prototype.renderLoop = function (framestamp: number): void {
-    const g = this as Globe;
+Earth.prototype.renderLoop = function (framestamp: number): void {
+    const g = this as Earth;
     //帧率
     g._state_globerender_.performance = 1000 / (framestamp - (g._state_globerender_.lastframestamp || 0));
     //worker
@@ -154,9 +153,9 @@ Globe.prototype.renderLoop = function (framestamp: number): void {
 /**
  * 
  */
-Globe.prototype.renderFrame = function (framestamp: number): void {
+Earth.prototype.renderFrame = function (framestamp: number): void {
     //逐帧渲染
-    const g = this as Globe, camera = g._state_camera_.camera, state = g._state_globerender_;
+    const g = this as Earth, camera = g._state_camera_.camera, state = g._state_globerender_;
     const ctx3d: Context = g.getContext3D();
     // ctx3d.clear({ color: [0.0, 0.0, 0.0, 1.0] });
     //发起渲染事件
@@ -173,4 +172,4 @@ Globe.prototype.renderFrame = function (framestamp: number): void {
     g.emit('frameend', state.performance);
 }
 
-Globe.registerHook(Globe.prototype.registerGlobeRenderer);
+Earth.registerHook(Earth.prototype.registerGlobeRenderer);
