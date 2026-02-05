@@ -1,12 +1,11 @@
 import { split } from './split';
 import { browser } from './browser';
-import type { IClientPoint } from '@pipegpu/camera';
+import type { IClientPoint } from '../control/EventParameters';
 
 const PREFIX = '_geosketchpad_';
 
 const addDOMEvent = function (element: HTMLElement, eventName: string, handler: Function, context: Object): void {
     const eventHandler = function (e: Event): void {
-        e = e || window.event;
         handler.call(context || element, e);
     }
     split(eventName).forEach((type: string) => {
@@ -66,17 +65,11 @@ const preventDefault = function (e: Event): void {
     if (e.preventDefault) {
         e.preventDefault();
     }
-    else {
-        e.returnValue = false;
-    }
 }
 
 const stopPropagation = function (e: Event): void {
     if (e.stopPropagation) {
         e.stopPropagation();
-    }
-    else {
-        e.cancelBubble = true;
     }
 }
 

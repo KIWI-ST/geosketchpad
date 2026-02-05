@@ -1,6 +1,6 @@
-import { EventEmitter } from '@pipegpu/camera';
-import { BaseEntity } from '@pipegpu/ecs';
+import { BaseComponent, BaseEntity, type ComponentTYPE } from '@pipegpu/ecs';
 import { isString } from './util/isString';
+import { EventBus } from './control/EventBus';
 
 // import type { IRenderer } from './render/IRenderer';
 // import type { Sketchpad, TSketchpadDataSchema } from './Sektchpad';
@@ -12,7 +12,7 @@ import { isString } from './util/isString';
  * const scene = new Scene();
  * await scene.init();
  */
-class Scene extends EventEmitter {
+class Scene extends EventBus {
     /**
     *  scene startup loading hook.
     */
@@ -76,6 +76,17 @@ class Scene extends EventEmitter {
      * @todo ecs entities
      */
     private entities_: BaseEntity[] = [];
+
+    /**
+     * @description all components maintenance
+     * key: component type.
+     * value: Map
+     * - key: uuid of entity
+     * - value: instance of component
+     * e.g:
+     * <'MeshComponent', <001, new MeshComponent()>>
+     */
+    private componentMap_: Map<ComponentTYPE, Map<string, BaseComponent>> = new Map();
 
     /**
      * 初始化地图信息快照
@@ -156,7 +167,7 @@ class Scene extends EventEmitter {
     ) {
         super();
         this.canvas_ = (isString(opts.canvas) ? document.getElementById(opts.canvas as string) : opts.canvas) as HTMLCanvasElement;
-        this.devicePixelRatio_ = opts.devicePixelRatio || 1.0;
+        this.devicePixelRatio_ = opts.devicePixelRatio || devicePixelRatio || 1.0;
         this.width_ = opts.width;
         this.height_ = opts.height;
         this.initCavnas();
@@ -171,7 +182,6 @@ class Scene extends EventEmitter {
     }
 
     public init = async () => {
-
         this.initHooks();
         // 辅助功能，待设计开启关闭
         // this.initAuxTools();
@@ -221,6 +231,21 @@ class Scene extends EventEmitter {
             console.warn(`[W][createEntity] eneity uuid: ${uuid} already exists. duplicate addition is unnecessary.`);
         }
         return entity;
+    }
+
+    /**
+     * 
+     * @param {string} uuid uuid of entity 
+     * @param {T} c, instance of component 
+     */
+    public addComponent<T extends BaseComponent>(uuid: string, c: T): void {
+        if (!this.entities_.some(existEntity => existEntity.UUID === uuid)) {
+            throw new Error(`[E][Scene][addComponent] invalid instance.`);
+        }
+        if (!this.componentMap_.has(c.TYPE)) {
+            this.componentMap_.set(c.TYPE, new Map());
+        }
+        this.componentMap_.get(c.TYPE)!.set(uuid, c);
     }
 }
 

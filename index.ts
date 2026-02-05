@@ -1,3 +1,4 @@
+import { BaseEntity, CameraComponent, EarthComponent } from '@pipegpu/ecs';
 import { Scene } from './src/Scene';
 import './src/scene/Scene.Handler';
 
@@ -10,9 +11,17 @@ import './src/scene/Scene.Handler';
 
     await scene.init();
 
+    // camera entity
+    const cameraEntity = scene.createEntity();
+    const cameraComponent: CameraComponent = new CameraComponent();
+    scene.addComponent(cameraEntity.UUID, cameraComponent);
+
+    // earth entity
+    const earthEntity = scene.createEntity();
+    scene.addComponent(earthEntity.UUID, new EarthComponent());
+
     // coordinate: new GeodeticCoordinate(116.3958, 39.828)
     // const earthEntity = scene.createEntity();
-
 })();
 
 

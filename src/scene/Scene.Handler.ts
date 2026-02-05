@@ -1,14 +1,13 @@
-import type { IDOMEventParam } from '@pipegpu/camera';
+import type { IDOMEventParam } from '../control/EventParameters';
 import { Scene } from '../Scene';
-import { addDOMEvent, preventDefault } from '../util/dom';
 import { now } from '../util/now';
+import { addDOMEvent, preventDefault } from '../util/dom';
 
 /**
  * 浏览器控件支持的交互类型
  * 提供：
  * -浏览器支持的交互事件注册
  * -无效的事件响应
- *
  */
 const DOM_EVENT_TYPES =
     'wheel ' +
@@ -174,5 +173,4 @@ Scene.prototype.getActualEvent = function (e: Event): Event | Touch {
     return e;
 }
 
-//钩子，handler插件需要预执行的方法注册到钩子里
 Scene.registerHook(Scene.prototype.registerDOMEventsHook);
