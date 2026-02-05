@@ -1,6 +1,6 @@
 import { split } from './split';
 import { browser } from './browser';
-import type { IClientPoint } from '../control/EventParameters';
+import { vec2, type Vec2 } from 'wgpu-matrix';
 
 const PREFIX = '_geosketchpad_';
 
@@ -73,7 +73,13 @@ const stopPropagation = function (e: Event): void {
     }
 }
 
-const getEventContainerPosition = (e: MouseEvent | TouchEvent, dom: HTMLCanvasElement | HTMLDivElement): IClientPoint => {
+/**
+ * @description https://www.w3cschool.cn/fetch_api/fetch_api-w3zc2v4w.html
+ * @param e 
+ * @param dom 
+ * @returns 
+ */
+const getEventContainerPosition = (e: MouseEvent | TouchEvent, dom: HTMLCanvasElement | HTMLDivElement): Vec2 => {
     const targetEvent = e instanceof MouseEvent ? e : e.touches[0];
     const style = window.getComputedStyle(dom);
     const padding = [parseInt(style.paddingLeft), parseInt(style.paddingTop)];
@@ -82,11 +88,10 @@ const getEventContainerPosition = (e: MouseEvent | TouchEvent, dom: HTMLCanvasEl
     const scaleX = offsetWidth ? rect.width / offsetWidth : 1;
     const scaleY = offsetHeight ? rect.height / offsetHeight : 1;
     const position = [rect.left + padding[0], rect.top + padding[1], scaleX, scaleY];
-
-    return {
-        clientX: (targetEvent.clientX - position[0] - dom.clientLeft) / position[2],
-        clientY: (targetEvent.clientY - position[1] - dom.clientTop) / position[3]
-    }
+    return vec2.create(
+        (targetEvent.clientX - position[0] - dom.clientLeft) / position[2],
+        (targetEvent.clientY - position[1] - dom.clientTop) / position[3]
+    );
 }
 
 export {

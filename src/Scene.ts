@@ -1,6 +1,7 @@
-import { BaseComponent, BaseEntity, type ComponentTYPE } from '@pipegpu/ecs';
+
 import { isString } from './util/isString';
-import { EventBus } from './control/EventBus';
+import { BaseEntity } from './ecs/BaseEntity';
+import type { BaseComponent, ComponentTYPE } from './ecs/BaseComponent';
 
 // import type { IRenderer } from './render/IRenderer';
 // import type { Sketchpad, TSketchpadDataSchema } from './Sektchpad';
@@ -12,7 +13,7 @@ import { EventBus } from './control/EventBus';
  * const scene = new Scene();
  * await scene.init();
  */
-class Scene extends EventBus {
+class Scene {
     /**
     *  scene startup loading hook.
     */
@@ -165,7 +166,6 @@ class Scene extends EventBus {
             devicePixelRatio?: number,
         }
     ) {
-        super();
         this.canvas_ = (isString(opts.canvas) ? document.getElementById(opts.canvas as string) : opts.canvas) as HTMLCanvasElement;
         this.devicePixelRatio_ = opts.devicePixelRatio || devicePixelRatio || 1.0;
         this.width_ = opts.width;
@@ -246,6 +246,10 @@ class Scene extends EventBus {
             this.componentMap_.set(c.TYPE, new Map());
         }
         this.componentMap_.get(c.TYPE)!.set(uuid, c);
+    }
+
+    public getComponents = (t: ComponentTYPE): Map<string, BaseComponent> | undefined => {
+        return this.componentMap_.get(t);
     }
 }
 

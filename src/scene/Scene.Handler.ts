@@ -1,7 +1,7 @@
-import type { IDOMEventParam } from '../control/EventParameters';
 import { Scene } from '../Scene';
 import { now } from '../util/now';
 import { addDOMEvent, preventDefault } from '../util/dom';
+import { domBus, type DOMBusContext, type DOMBusEvent } from '../bus/DomBus';
 
 /**
  * 浏览器控件支持的交互类型
@@ -133,20 +133,21 @@ Scene.prototype.handleDOMEvent = function (e: Event): void {
     } else if (type === 'wheel' || (e instanceof TouchEvent && (e.touches && e.touches.length === 2))) {
         type = 'zoom';
     }
-    //发送事件
-    g.emit(type, g.parseEvent(e, type));
+    domBus.emit(type as DOMBusEvent, g.parseEvent(e, type));
 }
 
 /**
  *
  */
-Scene.prototype.parseEvent = function (e: TouchEvent | MouseEvent, type: string): IDOMEventParam {
-    const DOMEventParam: IDOMEventParam = {
+Scene.prototype.parseEvent = function (e: TouchEvent | MouseEvent, type: string): DOMBusContext {
+    const DOMEventParam: DOMBusContext = {
+        type: e.type,
         domEvent: e
     };
     if (!e) {
         return DOMEventParam;
     }
+    // @todo support keypress for 3d view change.
     const ctx = this as Scene;
     if (type !== 'keypress' && ctx.getActualEvent(e)) {
         // const containerPoint = getEventContainerPoint(actual, this._containerDOM);

@@ -30,7 +30,6 @@
     "@pipegpu/core": "*",
     "@pipegpu/geography": "*",
     "@pipegpu/worker": "*",
-    "@pipegpu/ecs": "*",
     "wgpu-matrix": "^3.4.0"
   }
 }
