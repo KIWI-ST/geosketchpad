@@ -2,10 +2,22 @@ import type { Vec2 } from "wgpu-matrix";
 import { BaseEventBus, type EventCallback } from "./BaseEventBus";
 
 /**
- * 
+ * @description
  */
-type SceneBusEvent = 'panstart' | 'paning' | 'panend' | 'zoomin' | 'zoomout';
+type SceneBusEvent =
+    | 'panStart'
+    | 'paning'
+    | 'panEnd'
+    | 'zoomIn'
+    | 'zoomOut'
+    | 'frameStart'
+    | 'frameEnd'
+    | 'dispatchWorker'
+    ;
 
+/**
+ * @description
+ */
 interface SceneBusContext {
     domEvent: TouchEvent | MouseEvent | WheelEvent;
     currentPosition?: Vec2;

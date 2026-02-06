@@ -1,24 +1,43 @@
-import { BaseEntity, CameraComponent, EarthComponent } from '@pipegpu/ecs';
-import { Scene } from './src/Scene';
-import './src/scene/Scene.Handler';
+import { vec3 } from "wgpu-matrix";
+import { EarthComponent, PerspectiveCameraComponent, Scene } from "./src";
 
 (async () => {
+    const W = window.innerWidth - 30;
+    const H = window.innerHeight - 20;
     const scene: Scene = new Scene({
-        width: window.innerWidth - 30,
-        height: window.innerHeight - 20,
+        width: W,
+        height: H,
         canvas: "mapCanvas",
+        devicePixelRatio: devicePixelRatio,
     });
-
     await scene.init();
+
+    // const lng: number = 116.397128;
+    // const lat: number = 39.917527;
+    // const alt: number = 1000;
 
     // camera entity
     const cameraEntity = scene.createEntity();
-    const cameraComponent: CameraComponent = new CameraComponent();
-    scene.addComponent(cameraEntity.UUID, cameraComponent);
+    {
+        const cameraComponent: PerspectiveCameraComponent = new PerspectiveCameraComponent({
+            position: vec3.create(-2178205.929902805, 4388519.719950141, 4071608.1284322627),
+            near: 0.1,
+            far: 10000000000.0,
+            aspect: W / H,
+            fov: 60,
+            reversedZ: false,
+        });
+        cameraComponent.IsMainCamera = true;
+        scene.addComponent(cameraEntity.UUID, cameraComponent);
+    }
+
 
     // earth entity
     const earthEntity = scene.createEntity();
-    scene.addComponent(earthEntity.UUID, new EarthComponent());
+    {
+        scene.addComponent(earthEntity.UUID, new EarthComponent());
+    }
+
 
     // coordinate: new GeodeticCoordinate(116.3958, 39.828)
     // const earthEntity = scene.createEntity();

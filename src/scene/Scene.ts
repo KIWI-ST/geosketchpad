@@ -1,7 +1,7 @@
 
-import { isString } from './util/isString';
-import { BaseEntity } from './ecs/BaseEntity';
-import type { BaseComponent, ComponentTYPE } from './ecs/BaseComponent';
+import { isString } from '../util/isString';
+import { BaseEntity } from '../ecs/BaseEntity';
+import type { BaseComponent, ComponentTYPE } from '../ecs/BaseComponent';
 
 // import type { IRenderer } from './render/IRenderer';
 // import type { Sketchpad, TSketchpadDataSchema } from './Sektchpad';
@@ -17,13 +17,13 @@ class Scene {
     /**
     *  scene startup loading hook.
     */
-    public static hooks: { func: Function, args: any[] }[] = [];
+    public static hooks: { func: (scene: Scene, ...args: any[]) => Promise<void>; args: any[] }[] = [];
 
     /**
      * @param func 
      * @param args 
      */
-    static registerHook(func: Function, ...args: any[]) {
+    public static registerHook(func: (scene: Scene, ...args: any[]) => Promise<void>, ...args: any[]) {
         Scene.hooks.push({ func, args });
     }
 
@@ -182,9 +182,7 @@ class Scene {
     }
 
     public init = async () => {
-        this.initHooks();
-        // 辅助功能，待设计开启关闭
-        // this.initAuxTools();
+        await this.initHooks();
     }
 
     private initCavnas = (): void => {
@@ -198,15 +196,12 @@ class Scene {
         // this.registerCamera(c);
     }
 
-    private initHooks = (): void => {
-        Scene.hooks?.forEach(hook => {
-            const { func, args } = hook;
-            func.apply(this, args);
+    private initHooks = async (): Promise<void> => {
+        const scene = this as Scene;
+        Scene.hooks?.forEach(async hook => {
+            const { func, args = [] } = hook;
+            await func.apply(scene, [scene, ...args]);
         });
-    }
-
-    private initAuxTools = (): void => {
-        // this.EnableCursorAuxTool();
     }
 
     private getUUID() {

@@ -1,4 +1,4 @@
-import type { Scene } from "../../Scene";
+import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
 import '../../scene/Scene.Handler.Pan';
 import '../../scene/Scene.Handler.Zoom';

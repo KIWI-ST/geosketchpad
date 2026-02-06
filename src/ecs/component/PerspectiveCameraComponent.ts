@@ -1,11 +1,11 @@
 import { PerspectiveCamera } from '@pipegpu/camera';
 import { BaseComponent } from '../BaseComponent';
-import { vec3, type Mat4, type Vec3 } from 'wgpu-matrix';
+import { type Mat4, type Vec3 } from 'wgpu-matrix';
 
 /**
- * @class CameraComponent
+ * @class PerspectiveCameraComponent
  */
-class CameraComponent extends BaseComponent {
+class PerspectiveCameraComponent extends BaseComponent {
     /**
      * 
      */
@@ -34,6 +34,7 @@ class CameraComponent extends BaseComponent {
     ) {
         super('PerspectiveCameraComponent');
         this.camera_ = new PerspectiveCamera(opts.fov, opts.aspect, opts.near, opts.far, opts.reversedZ);
+        this.camera_.Position = opts.position;
     }
 
     get Position() {
@@ -62,5 +63,5 @@ class CameraComponent extends BaseComponent {
 }
 
 export {
-    CameraComponent
+    PerspectiveCameraComponent
 }

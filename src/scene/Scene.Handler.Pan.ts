@@ -1,16 +1,15 @@
 import { vec2, type Vec2 } from 'wgpu-matrix';
-import { Scene } from '../Scene';
+import { Scene } from './Scene';
 import { split } from '../util/split';
 import { getEventContainerPosition } from '../util/dom';
-import { domBus, DOMBusEndEventMapping, DOMBusMoveEventMapping, DOMBusStartEvents, type DOMBusContext, type DOMBusEvent } from '../bus/DomBus';
 import { sceneBus, type SceneBusContext } from '../bus/SceneBus';
+import { domBus, DOMBusEndEventMapping, DOMBusMoveEventMapping, DOMBusStartEvents, type DOMBusContext, type DOMBusEvent } from '../bus/DOMBus';
 
 /**
- * register all pan related event
+ * @description register all pan related event
  */
-declare module '../Scene' {
+declare module './Scene' {
     interface Scene {
-        registerPanHandlerHood(): void;
         releasePanHandlerEvents(t: string): void;
         panMousedownOrTouchstart(c: DOMBusContext): void;
         panMousemoveOrTouchmove(c: DOMBusContext): void;
@@ -21,18 +20,6 @@ declare module '../Scene' {
             interupted: boolean;
         }
     }
-}
-
-Scene.prototype.registerPanHandlerHood = (): void => {
-    const g = this as unknown as Scene;
-    g._state_handler_pan_ = {
-        startPosition: vec2.create(),
-        moved: false,
-        interupted: false,
-    };
-    split(DOMBusStartEvents).forEach((type) => {
-        domBus.on(type as DOMBusEvent, g.panMousedownOrTouchstart, g);
-    });
 }
 
 Scene.prototype.panMousedownOrTouchstart = (c: DOMBusContext): void => {
@@ -47,7 +34,7 @@ Scene.prototype.panMousedownOrTouchstart = (c: DOMBusContext): void => {
         domEvent: e,
         currentPosition: cp,
     };
-    sceneBus.emit('panstart', ctx);
+    sceneBus.emit('panStart', ctx);
     domBus.on(DOMBusMoveEventMapping[e.type] as DOMBusEvent, g.panMousemoveOrTouchmove, g);
     domBus.on(DOMBusEndEventMapping[e.type] as DOMBusEvent, g.panMouseupOrTouchend, g);
 }
@@ -85,7 +72,7 @@ Scene.prototype.panMouseupOrTouchend = (c: DOMBusContext): void => {
         domEvent: e,
         currentPosition: cp,
     };
-    sceneBus.emit('panend', ctx);
+    sceneBus.emit('panEnd', ctx);
 }
 
 Scene.prototype.releasePanHandlerEvents = (t: string): void => {
@@ -94,4 +81,17 @@ Scene.prototype.releasePanHandlerEvents = (t: string): void => {
     domBus.off(DOMBusEndEventMapping[t] as DOMBusEvent, g.panMouseupOrTouchend, g);
 }
 
-Scene.registerHook(Scene.prototype.registerPanHandlerHood);
+Scene.registerHook(
+    async (scene: Scene) => {
+        // init scene pan state.
+        scene._state_handler_pan_ = {
+            startPosition: vec2.create(),
+            moved: false,
+            interupted: false,
+        };
+        // register pan related events.
+        split(DOMBusStartEvents).forEach((type) => {
+            domBus.on(type as DOMBusEvent, scene.panMousedownOrTouchstart, scene);
+        });
+    }
+);

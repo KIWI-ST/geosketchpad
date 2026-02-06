@@ -1,13 +1,14 @@
-import { Scene } from '../Scene';
+import { Scene } from './Scene';
 import { now } from '../util/now';
 import { addDOMEvent, preventDefault } from '../util/dom';
-import { domBus, type DOMBusContext, type DOMBusEvent } from '../bus/DomBus';
+import { domBus, type DOMBusContext, type DOMBusEvent } from '../bus/DOMBus';
+
 
 /**
- * 浏览器控件支持的交互类型
- * 提供：
- * -浏览器支持的交互事件注册
- * -无效的事件响应
+ * Interaction Types Supported by Browser Controls
+ * Provides:
+ * - Browser-supported interaction event registration
+ * - Invalid event responses
  */
 const DOM_EVENT_TYPES =
     'wheel ' +
@@ -27,71 +28,17 @@ const DOM_EVENT_TYPES =
     'touchend ';
 
 /**
- * 合并申明
- * reference:
- * https://www.tslang.cn/docs/handbook/declaration-merging.html
+ * @description ref: https://www.tslang.cn/docs/handbook/declaration-merging.html
  */
-declare module './../Scene' {
+declare module './Scene' {
     interface Scene {
-        /**
-         *
-         */
-        registerDOMEventsHook(): void;
-
-        /**
-         *
-         * @param obj
-         * @param eventName
-         * @param handler
-         * @param context
-         */
-        onDOMEvent(obj: HTMLElement, eventName: string, handler: Function, context: object): void;
-
-        /**
-         *
-         * @param e
-         */
         handleDOMEvent(e: Event): void;
-
-        /**
-         * 转换事件对象
-         * @param e
-         * @param type
-         */
-        parseEvent(e: Event, type: string): void;
-
-        /**
-         *
-         * @param e
-         */
+        parseEvent(e: Event, type: string): DOMBusContext;
         getActualEvent(e: Event): Event | Touch;
-
-        /**
-         *
-         */
         _state_handler_dom_: {
             mouseDownTime?: number;
         }
     }
-}
-
-/**
- * register DOMEvent entry
- * @function registerDOMEventsHook
- */
-Scene.prototype.registerDOMEventsHook = function () {
-    const scene = this as Scene;
-    scene._state_handler_dom_ = {
-        mouseDownTime: 0
-    };
-    scene.onDOMEvent(scene.Canvas, DOM_EVENT_TYPES, scene.handleDOMEvent, scene);
-}
-
-/**
- * 单个DOM事件过滤
- */
-Scene.prototype.onDOMEvent = function (element: HTMLElement, eventName: string, handler: Function, context: object): void {
-    addDOMEvent(element, eventName, handler, context);
 }
 
 /**
@@ -174,4 +121,17 @@ Scene.prototype.getActualEvent = function (e: Event): Event | Touch {
     return e;
 }
 
-Scene.registerHook(Scene.prototype.registerDOMEventsHook);
+/**
+ * register DOMEvent entry
+ * @function registerDOMEventsHook
+ */
+Scene.registerHook(
+    async (scene: Scene) => {
+        // init scene state.
+        scene._state_handler_dom_ = {
+            mouseDownTime: 0
+        };
+        // register document event.
+        addDOMEvent(scene.Canvas, DOM_EVENT_TYPES, scene.handleDOMEvent, scene);
+    }
+);

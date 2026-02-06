@@ -1,9 +1,9 @@
 import { vec2, type Vec2 } from "wgpu-matrix";
-import { domBus, type DOMBusContext } from "../bus/DomBus";
-import { Scene } from "../Scene";
+import { Scene } from "./Scene";
 import { getEventContainerPosition, preventDefault, stopPropagation } from "../util/dom";
 import { now } from "../util/now";
 import { sceneBus, type SceneBusContext } from "../bus/SceneBus";
+import { domBus, type DOMBusContext } from "../bus/DOMBus";
 
 //参考
 const wheelZoomDelta = 4.000244140625;
@@ -11,9 +11,8 @@ const wheelZoomDelta = 4.000244140625;
 /**
  * 
  */
-declare module "../Scene" {
+declare module './Scene' {
     interface Scene {
-        registerZoomHandlerHook(): void;
         releaseZoomHandlerEvents(): void;
         zoomMousewheelOrTouch(c: DOMBusContext): void;
         processZoomWheel(e: WheelEvent, g: Scene): void;
@@ -31,28 +30,14 @@ declare module "../Scene" {
     }
 }
 
-Scene.prototype.registerZoomHandlerHook = (): void => {
+Scene.prototype.releaseZoomHandlerEvents = (): void => {
     const g = this as unknown as Scene;
-    g._state_handler_zoom_ = {
-        lastWheelTime: 0,
-        onceWheelCount: 0,
-        delate: 0,
-        active: false,
-        zooming: false,
-        trackPadSuspect: 0,
-        ensureTrackpad: false,
-        zoomOrigin: vec2.create(0, 0),
-    };
-    domBus.on('zoom', g.zoomMousewheelOrTouch, g);
-}
-
-Scene.prototype.releaseZoomHandlerEvents = function (): void {
-    const g = this as Scene;
     domBus.off('zoom', g.zoomMousewheelOrTouch, g);
 }
 
-Scene.prototype.zoomMousewheelOrTouch = function (c: DOMBusContext): void {
-    const g = this as Scene, e = c.domEvent;
+Scene.prototype.zoomMousewheelOrTouch = (c: DOMBusContext): void => {
+    const g = this as unknown as Scene;
+    const e = c.domEvent;
     preventDefault(e);
     stopPropagation(e);
     if (e.type === 'wheel' && !g._state_handler_zoom_.zooming) {
@@ -72,7 +57,7 @@ Scene.prototype.zoomMousewheelOrTouch = function (c: DOMBusContext): void {
     }
 }
 
-Scene.prototype.processZoomWheel = function (e: WheelEvent, g: Scene): void {
+Scene.prototype.processZoomWheel = (e: WheelEvent, g: Scene): void => {
     const currentPosition = getEventContainerPosition(e, g.Canvas);
     const ctx: SceneBusContext = {
         domEvent: e,
@@ -104,9 +89,24 @@ Scene.prototype.processZoomWheel = function (e: WheelEvent, g: Scene): void {
     }
     ctx.value = value;
     ctx.zoom = g._state_handler_zoom_.onceWheelCount;
-
     //seamless
-    sceneBus.emit('zoomin', ctx);
+    sceneBus.emit('zoomIn', ctx);
 }
 
-Scene.registerHook(Scene.prototype.registerZoomHandlerHook);
+Scene.registerHook(
+    async (scene: Scene) => {
+        // scene zoom state.
+        scene._state_handler_zoom_ = {
+            lastWheelTime: 0,
+            onceWheelCount: 0,
+            delate: 0,
+            active: false,
+            zooming: false,
+            trackPadSuspect: 0,
+            ensureTrackpad: false,
+            zoomOrigin: vec2.create(0, 0),
+        };
+        // register zoom related events.
+        domBus.on('zoom', scene.zoomMousewheelOrTouch, scene);
+    }
+);

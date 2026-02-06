@@ -1,6 +1,5 @@
 
 
-import type { Vec2 } from "wgpu-matrix";
 import { BaseEventBus, type EventCallback } from "./BaseEventBus";
 
 /**
