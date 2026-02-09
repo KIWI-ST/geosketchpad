@@ -22,52 +22,52 @@ declare module './Scene' {
     }
 }
 
-Scene.prototype.panMousedownOrTouchstart = (c: DOMBusContext): void => {
+Scene.prototype.panMousedownOrTouchstart = function (c: DOMBusContext): void {
     const e = c.domEvent;
-    const g = this as unknown as Scene;
     if ((e instanceof MouseEvent && e.button === 2) || (e instanceof TouchEvent && e.touches && e.touches.length > 1)) {
         return;
     }
-    const cp = getEventContainerPosition(e, g.Canvas);
-    g._state_handler_pan_.startPosition = cp;
+    const cp = getEventContainerPosition(e, this.Canvas);
+    this._state_handler_pan_.startPosition = cp;
     const ctx: SceneBusContext = {
         domEvent: e,
         currentPosition: cp,
     };
     sceneBus.emit('panStart', ctx);
-    domBus.on(DOMBusMoveEventMapping[e.type] as DOMBusEvent, g.panMousemoveOrTouchmove, g);
-    domBus.on(DOMBusEndEventMapping[e.type] as DOMBusEvent, g.panMouseupOrTouchend, g);
+    domBus.on(DOMBusMoveEventMapping[e.type] as DOMBusEvent, this.panMousemoveOrTouchmove, this);
+    domBus.on(DOMBusEndEventMapping[e.type] as DOMBusEvent, this.panMouseupOrTouchend, this);
 }
 
-Scene.prototype.panMousemoveOrTouchmove = (c: DOMBusContext): void => {
+Scene.prototype.panMousemoveOrTouchmove = function (c: DOMBusContext): void {
     const e = c.domEvent;
-    const g = this as unknown as Scene;
     if (e instanceof TouchEvent && e.touches && e.touches.length > 1) {
-        if (g._state_handler_pan_.moved) {
-            g._state_handler_pan_.interupted = true;
-            g.panMouseupOrTouchend(c);
+        if (this._state_handler_pan_.moved) {
+            this._state_handler_pan_.interupted = true;
+            this.panMouseupOrTouchend(c);
         }
         return;
     }
-    const cp = getEventContainerPosition(e, g.Canvas);
-    const currentPosition = cp;
-    const offset = vec2.sub(currentPosition, g._state_handler_pan_.startPosition);
+    const position = getEventContainerPosition(e, this.Canvas);
+    const currentPosition = position;
+    const offset = vec2.sub(currentPosition, this._state_handler_pan_.startPosition);
     if (!offset[0] && !offset[1]) {
         return;
     }
     const ctx: SceneBusContext = {
         domEvent: e,
-        currentPosition: cp,
+        currentPosition: position,
     };
+
+    console.log(`${ctx}`);
+
     sceneBus.emit('paning', ctx);
-    g._state_handler_pan_.startPosition = currentPosition;
+    this._state_handler_pan_.startPosition = currentPosition;
 }
 
-Scene.prototype.panMouseupOrTouchend = (c: DOMBusContext): void => {
+Scene.prototype.panMouseupOrTouchend = function (c: DOMBusContext): void {
     const e = c.domEvent;
-    const g = this as unknown as Scene
-    g.releasePanHandlerEvents(c.type);
-    const cp = getEventContainerPosition(e, g.Canvas);
+    this.releasePanHandlerEvents(c.type);
+    const cp = getEventContainerPosition(e, this.Canvas);
     const ctx: SceneBusContext = {
         domEvent: e,
         currentPosition: cp,
@@ -75,10 +75,9 @@ Scene.prototype.panMouseupOrTouchend = (c: DOMBusContext): void => {
     sceneBus.emit('panEnd', ctx);
 }
 
-Scene.prototype.releasePanHandlerEvents = (t: string): void => {
-    const g = this as unknown as Scene;
-    domBus.off(DOMBusMoveEventMapping[t] as DOMBusEvent, g.panMousemoveOrTouchmove, g);
-    domBus.off(DOMBusEndEventMapping[t] as DOMBusEvent, g.panMouseupOrTouchend, g);
+Scene.prototype.releasePanHandlerEvents = function (t: string): void {
+    domBus.off(DOMBusMoveEventMapping[t] as DOMBusEvent, this.panMousemoveOrTouchmove, this);
+    domBus.off(DOMBusEndEventMapping[t] as DOMBusEvent, this.panMouseupOrTouchend, this);
 }
 
 Scene.registerHook(

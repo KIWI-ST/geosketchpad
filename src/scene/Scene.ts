@@ -1,10 +1,6 @@
-
 import { isString } from '../util/isString';
 import { BaseEntity } from '../ecs/BaseEntity';
 import type { BaseComponent, ComponentTYPE } from '../ecs/BaseComponent';
-
-// import type { IRenderer } from './render/IRenderer';
-// import type { Sketchpad, TSketchpadDataSchema } from './Sektchpad';
 
 /**
  * @class Scene
@@ -12,11 +8,14 @@ import type { BaseComponent, ComponentTYPE } from '../ecs/BaseComponent';
  * @example
  * const scene = new Scene();
  * await scene.init();
+ *
+ * @WARNING
+ * function should not written in lambda style. for 'this' binding it not runtime bind.
  */
 class Scene {
     /**
-    *  scene startup loading hook.
-    */
+     * @description scene startup loading hook.
+     */
     public static hooks: { func: (scene: Scene, ...args: any[]) => Promise<void>; args: any[] }[] = [];
 
     /**
@@ -33,47 +32,26 @@ class Scene {
     private entityIDX_: number = 0;
 
     /**
-     * 初始化地图对象参数
-     */
-    // protected origin_: {
-    //     center: GeodeticCoordinate,
-    //     zoom: number,
-    //     zoomMin: number,
-    //     zoomMax: number
-    // }
-
-    /**
      * canvas
      */
     protected canvas_: HTMLCanvasElement;
 
     /**
-     * 设备ppi比率
+     * @description device pixel ratio.
      */
     protected devicePixelRatio_: number;
 
     /**
-     * 当前参考椭球
-     */
-    // protected ellipsoid_: Ellipsoid;
-
-    /**
-     * 当前地图投影
-     */
-    // protected prjection_: Projection;
-
-    /**
-     * 显示区域像素宽度
+     * @description view area width (px)
      */
     protected width_: number;
 
     /**
-     * 显示区域像素高度
+     * @description view area height (px)
      */
     protected height_: number;
 
     /**
-     * 装载到场景的可渲染对象集合
      * @todo ecs entities
      */
     private entities_: BaseEntity[] = [];
@@ -90,13 +68,6 @@ class Scene {
     private componentMap_: Map<ComponentTYPE, Map<string, BaseComponent>> = new Map();
 
     /**
-     * 初始化地图信息快照
-     */
-    // public get Origin() {
-    //     return this.origin_;
-    // }
-
-    /**
      * dom元素
      */
     public get Canvas(): HTMLCanvasElement {
@@ -104,35 +75,14 @@ class Scene {
     }
 
     /**
-     * 获取投影的参考椭球
-     */
-    // public get Ellipsoid(): Ellipsoid {
-    //     return this.ellipsoid_;
-    // }
-
-    /**
-     * 最长半径（椭球最长轴）
-     */
-    // public get MaximumRadius(): number {
-    //     return this.ellipsoid_.MaximumRadius;
-    // }
-
-    /**
-     * 地图当前缩放层级
-     */
-    // public get Zoom(): number {
-    //     return this._state_quadtree_.level;
-    // }
-
-    /**
-     * 
+     * @description width (px) of render view area.
      */
     public get Width(): number {
         return this.width_;
     }
 
     /**
-     * 
+     * @description height (px) of render view area
      */
     public get Height(): number {
         return this.height_;
@@ -181,11 +131,11 @@ class Scene {
         // };
     }
 
-    public init = async () => {
+    public async init() {
         await this.initHooks();
     }
 
-    private initCavnas = (): void => {
+    private initCavnas(): void {
         // const c = this.origin_.center, 
         const r = this.devicePixelRatio_;
         const w = this.width_, h = this.height_, rw = r * w, rh = r * h;
@@ -196,7 +146,10 @@ class Scene {
         // this.registerCamera(c);
     }
 
-    private initHooks = async (): Promise<void> => {
+    /**
+     * @description
+     */
+    private async initHooks(): Promise<void> {
         const scene = this as Scene;
         Scene.hooks?.forEach(async hook => {
             const { func, args = [] } = hook;
@@ -204,6 +157,9 @@ class Scene {
         });
     }
 
+    /**
+     * @returns 
+     */
     private getUUID() {
         return `${this.entityIDX_++}`;
     }
@@ -212,9 +168,7 @@ class Scene {
      * @param EntityConstructor 
      * @returns 
      */
-    public createEntity = <T extends BaseEntity>(
-        EntityConstructor: new (uuid: string) => T = BaseEntity as unknown as new (uuid: string) => T
-    ): T => {
+    public createEntity<T extends BaseEntity>(EntityConstructor: new (uuid: string) => T = BaseEntity as unknown as new (uuid: string) => T): T {
         const uuid: string = this.getUUID();
         const entity = new EntityConstructor(uuid);
         if (!(entity instanceof BaseEntity)) {
@@ -229,7 +183,6 @@ class Scene {
     }
 
     /**
-     * 
      * @param {string} uuid uuid of entity 
      * @param {T} c, instance of component 
      */
@@ -243,7 +196,11 @@ class Scene {
         this.componentMap_.get(c.TYPE)!.set(uuid, c);
     }
 
-    public getComponents = (t: ComponentTYPE): Map<string, BaseComponent> | undefined => {
+    /**
+     * @param t 
+     * @returns 
+     */
+    public getComponents(t: ComponentTYPE): Map<string, BaseComponent> | undefined {
         return this.componentMap_.get(t);
     }
 }

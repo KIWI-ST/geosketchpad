@@ -53,23 +53,22 @@ declare module './Scene' {
     }
 }
 
-Scene.prototype.getContext3D = (): Context => {
-    const scene = this as unknown as Scene;
+Scene.prototype.getContext3D = function (): Context {
+    const scene = this as Scene;
     return scene._state_renderer_.ctx3d;
 }
 
-Scene.prototype.renderLoop = (frameID: number): void => {
-    const scene = this as unknown as Scene;
+Scene.prototype.renderLoop = function (frameID: number): void {
     const timeStamp = now();
-    scene._state_renderer_.performance = 1000 / (timeStamp - (scene._state_renderer_.lastTimeStamp || 0));
-    scene._state_renderer_.lastTimeStamp = timeStamp;
+    this._state_renderer_.performance = 1000 / (timeStamp - (this._state_renderer_.lastTimeStamp || 0));
+    this._state_renderer_.lastTimeStamp = timeStamp;
     callWokers();
     callAnimation(timeStamp);
-    scene.render(frameID, timeStamp);
-    scene._state_renderer_.frameID = RAF.call(
+    this.render(frameID, timeStamp);
+    this._state_renderer_.frameID = RAF.call(
         window,
         (framestamp: number) => {
-            scene.renderLoop(framestamp)
+            this.renderLoop(framestamp)
         }
     );
 }
@@ -77,7 +76,7 @@ Scene.prototype.renderLoop = (frameID: number): void => {
 /**
  *
  */
-Scene.prototype.render = (_frameID: number, _timeStamp: number): void => {
+Scene.prototype.render = function (_frameID: number, _timeStamp: number): void {
     // const scene = this as unknown as Scene;
     sceneBus.emit('frameStart');
     // ecs system update
@@ -107,7 +106,7 @@ Scene.registerHook(
             height: scene.Height,
             devicePixelRatio: scene.DevicePixelRatio,
             selector: scene.Canvas,
-            requestFeatures: ['chromium-experimental-multi-draw-indirect']
+            // requestFeatures: ['chromium-experimental-multi-draw-indirect']
         };
         // init renderer state.
         scene._state_renderer_ = {
