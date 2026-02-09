@@ -1,5 +1,5 @@
 import { vec3 } from "wgpu-matrix";
-import { EarthComponent, PerspectiveCameraComponent, Scene } from "./src";
+import { EarthComponent, OrbitCameraComponent, Scene } from "./src";
 
 (async () => {
     const W = window.innerWidth - 30;
@@ -19,7 +19,7 @@ import { EarthComponent, PerspectiveCameraComponent, Scene } from "./src";
     // camera entity
     const cameraEntity = scene.createEntity();
     {
-        const cameraComponent: PerspectiveCameraComponent = new PerspectiveCameraComponent({
+        const cameraComponent: OrbitCameraComponent = new OrbitCameraComponent({
             position: vec3.create(-2178205.929902805, 4388519.719950141, 4071608.1284322627),
             near: 0.1,
             far: 10000000000.0,
@@ -28,6 +28,7 @@ import { EarthComponent, PerspectiveCameraComponent, Scene } from "./src";
             reversedZ: false,
         });
         cameraComponent.IsMainCamera = true;
+        cameraComponent.enable(true);
         scene.addComponent(cameraEntity.UUID, cameraComponent);
     }
 

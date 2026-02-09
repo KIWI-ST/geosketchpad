@@ -2,14 +2,14 @@ import { split } from './split';
 import { browser } from './browser';
 import { vec2, type Vec2 } from 'wgpu-matrix';
 
-const PREFIX = '_geosketchpad_';
+const _PREFIX_ = '_geosketchpad_';
 
 const addDOMEvent = function (element: HTMLElement, eventName: string, handler: Function, context: Object): void {
     const eventHandler = function (e: Event): void {
         handler.call(context || element, e);
     }
     split(eventName).forEach((type: string) => {
-        const key = `${PREFIX}_${type}`;
+        const key = `${_PREFIX_}_${type}`;
         (element as any)[key] = (element as any)[key] || [];
         const hit = listenDOMEvent(element, type, handler);
         if (hit >= 0) {
@@ -26,7 +26,7 @@ const addDOMEvent = function (element: HTMLElement, eventName: string, handler: 
 }
 
 const listenDOMEvent = function (element: HTMLElement, type: string, handler: Function): number {
-    const Key = `${PREFIX}_${type}`;
+    const Key = `${_PREFIX_}_${type}`;
     if (!element || !(element as any)[Key] || !handler) {
         return -1;
     }
@@ -45,7 +45,7 @@ const removeDOMEvent = function (element: HTMLElement, eventName: string, handle
     }
     const types = split(eventName);
     types.forEach((type) => {
-        const key = `${PREFIX}_${type}`;
+        const key = `${_PREFIX_}_${type}`;
         if (!handler && (element as any)[key]) {
             const handlers = (element as any)[key];
             handlers?.forEach((listener: EventListener) => {
@@ -79,7 +79,7 @@ const stopPropagation = function (e: Event): void {
  * @param dom 
  * @returns 
  */
-const getEventContainerPosition = (e: MouseEvent | TouchEvent, dom: HTMLCanvasElement | HTMLDivElement): Vec2 => {
+const getContainerPosition = (e: MouseEvent | TouchEvent, dom: HTMLCanvasElement | HTMLDivElement): Vec2 => {
     const targetEvent = e instanceof MouseEvent ? e : e.touches[0];
     const style = window.getComputedStyle(dom);
     const padding = [parseInt(style.paddingLeft), parseInt(style.paddingTop)];
@@ -95,7 +95,7 @@ const getEventContainerPosition = (e: MouseEvent | TouchEvent, dom: HTMLCanvasEl
 }
 
 export {
-    getEventContainerPosition,
+    getContainerPosition,
     addDOMEvent,
     removeDOMEvent,
     preventDefault,

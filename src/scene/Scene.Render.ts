@@ -3,18 +3,16 @@ import { Scene } from './Scene'
 import type { IContextOpts } from "@pipegpu/core/src/compile/parseContextDesc";
 import { now } from "../util/now";
 import { RAF } from "../util/raf";
-import { sceneBus } from "../bus/SceneBus";
 import { TweenCache } from "../util/Tween";
 
 /**
  * 
  */
 const callWokers = () => {
-    sceneBus.emit('dispatchWorker');
+    // sceneBus.emit('dispatchWorker');
 };
 
 /**
- * 
  * @param timeStamp 
  */
 const callAnimation = (timeStamp: number) => {
@@ -78,9 +76,9 @@ Scene.prototype.renderLoop = function (frameID: number): void {
  */
 Scene.prototype.render = function (_frameID: number, _timeStamp: number): void {
     // const scene = this as unknown as Scene;
-    sceneBus.emit('frameStart');
+    // sceneBus.emit('frameStart');
     // ecs system update
-    sceneBus.emit('frameEnd');
+    // sceneBus.emit('frameEnd');
     // const camera = scene._state_camera_.camera, state = g._state_renderer_;
     // const ctx3d: Context = g.getContext3D();
     // ctx3d.clear({ color: [0.0, 0.0, 0.0, 1.0] });

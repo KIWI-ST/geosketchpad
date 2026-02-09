@@ -3,7 +3,7 @@
  */
 type ComponentTYPE =
     `MeshComponent`
-    | `PerspectiveCameraComponent`
+    | `OrbitCameraComponent`
     | `MaterialComponent`
     | `LightComponent`
     | `ShadowComponet`
@@ -14,7 +14,7 @@ type ComponentTYPE =
 /**
  * @class BaseComponent
  */
-class BaseComponent {
+abstract class BaseComponent {
     /**
      * 
      */
@@ -33,6 +33,8 @@ class BaseComponent {
     get TYPE() {
         return this.componentTYPE_;
     }
+
+    abstract enable(b: boolean): void;
 }
 
 export {

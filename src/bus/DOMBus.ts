@@ -1,91 +1,70 @@
-
-
+import type { Vec2 } from "wgpu-matrix";
 import { BaseEventBus, type EventCallback } from "./BaseEventBus";
 
 /**
  * @description warpper document event and aux information.
  * @param type 
  */
-interface DOMBusContext {
-    type: string,
-    domEvent: TouchEvent | MouseEvent,
-    coordinate?: any,
-    viewPoint?: any,
-    point2d?: any,
-}
+type DOMBusContext = {
+    isMouseDown: boolean;
+    isRightMouseDown: boolean;
+    isKeyDown: boolean;
+    keyStatus: { [key: string]: boolean };
+    mouseStatus: { [key: number]: boolean };
+    point: Vec2;
+    lastPoint: Vec2;
+    offsetPoint: Vec2;
+    delta: number,
+};
 
-type DOMBusEvent =
-    'contextmenu'
-    | 'mousedown'
-    | 'touchstart'
-    | 'click'
-    | 'touchend'
-    | 'dbclick'
-    | 'mousemove'
-    | 'touchmove'
-    | 'mouseup'
-    | 'zoom'
+type DOMBusEventTYPE =
+    | 'POINTER_DOWN'
+    | 'POINTER_MIDDLE_DOWN'
+    | 'POINTER_MOVE'
+    | 'POINTER_UP'
+    | 'POINTER_MIDDLE_UP'
+    | 'POINTER_ZOOM'
+    | 'POINTER_DOUBLE_TAP'
+    | 'KEY_DOWN'
+    | 'KEY_UP'
     ;
-
-const DOMBusMoveEventMapping: {
-    [key: string]: string;
-} = {
-    mousedown: 'mousemove',
-    touchstart: 'touchmove',
-    pointerdown: 'touchmove',
-    MSPointerDown: 'touchmove'
-};
-
-const DOMBusEndEventMapping: {
-    [key: string]: string;
-} = {
-    mousedown: 'mouseup',
-    touchstart: 'touchend',
-    pointerdown: 'touchend',
-    MSPointerDown: 'touchend'
-};
-
-const DOMBusZoomEventMapping: {
-    [key: string]: string;
-} = {
-    wheel: 'wheel',
-    wheelend: 'wheelend'
-};
-
-
-const DOMBusStartEvents = 'touchstart mousedown';
 
 /**
  * receive all original (raw) document event
  * broadcast to other instance.
  */
 class DOMBus extends BaseEventBus {
+    /**
+     * 
+     */
+    private static hander_: DOMBus = new DOMBus();
+
+    /**
+     * 
+     */
+    static get Handler() {
+        return DOMBus.hander_;
+    }
 
     constructor() {
         super();
     }
 
-    public emit = (name: DOMBusEvent, ...args: DOMBusContext[]): void => {
+    public emit = (name: DOMBusEventTYPE, ...args: DOMBusContext[]): void => {
         super.emit(name, ...args);
     }
 
-    public on = <T extends any[] = any[]>(name: DOMBusEvent, listener: EventCallback<T>, context?: object): void => {
+    public on = <T extends any[] = any[]>(name: DOMBusEventTYPE, listener: EventCallback<T>, context?: object): void => {
         super.on(name, listener, context);
     }
 
-    public off = <T extends any[] = any[]>(name: DOMBusEvent, listener: EventCallback<T>, context?: object): void => {
+    public off = <T extends any[] = any[]>(name: DOMBusEventTYPE, listener: EventCallback<T>, context?: object): void => {
         super.off(name, listener, context);
     }
 }
 
-const domBus = new DOMBus();
-
 export {
     type DOMBusContext,
-    type DOMBusEvent,
-    DOMBusZoomEventMapping,
-    DOMBusMoveEventMapping,
-    DOMBusEndEventMapping,
-    DOMBusStartEvents,
-    domBus
+    type DOMBusEventTYPE,
+    DOMBus
 }
