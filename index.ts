@@ -1,7 +1,10 @@
 import { vec3 } from "wgpu-matrix";
-import { EarthComponent, OrbitCameraComponent, Scene } from "./src";
+import { OrbitCameraComponent, Scene } from "./src";
+import { PerspectiveCamera } from "@pipegpu/camera";
+import { PSEUDOMERCATOR } from "@pipegpu/geography";
 
 (async () => {
+
     const W = window.innerWidth - 30;
     const H = window.innerHeight - 20;
     const scene: Scene = new Scene({
@@ -15,29 +18,26 @@ import { EarthComponent, OrbitCameraComponent, Scene } from "./src";
     // const lng: number = 116.397128;
     // const lat: number = 39.917527;
     // const alt: number = 1000;
+    const camera = new PerspectiveCamera(60, W / H, 0.1, 10000000000, false);
+    camera.Position = vec3.create(-2178205.929902805, 4388519.719950141, 4071608.1284322627);
+
+    // Ellipsoid
+    const ellipsoid = PSEUDOMERCATOR;
 
     // camera entity
     const cameraEntity = scene.createEntity();
     {
-        const cameraComponent: OrbitCameraComponent = new OrbitCameraComponent({
-            position: vec3.create(-2178205.929902805, 4388519.719950141, 4071608.1284322627),
-            near: 0.1,
-            far: 10000000000.0,
-            aspect: W / H,
-            fov: 60,
-            reversedZ: false,
-        });
+        const cameraComponent: OrbitCameraComponent = new OrbitCameraComponent(camera, ellipsoid);
         cameraComponent.IsMainCamera = true;
         cameraComponent.enable(true);
         scene.addComponent(cameraEntity.UUID, cameraComponent);
     }
 
-
     // earth entity
-    const earthEntity = scene.createEntity();
-    {
-        scene.addComponent(earthEntity.UUID, new EarthComponent());
-    }
+    // const earthEntity = scene.createEntity();
+    // {
+    //     scene.addComponent(earthEntity.UUID, new EarthComponent());
+    // }
 
 
     // coordinate: new GeodeticCoordinate(116.3958, 39.828)

@@ -7,5 +7,4 @@ export * from './ecs/BaseComponent';
 export * from './ecs/BaseEntity';
 export * from './ecs/BaseSystem';
 export * from './ecs/component/OrbitCameraComponent';
-export * from './ecs/component/EarthComponent';
 export * from './ecs/system/CameraSystem';

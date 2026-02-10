@@ -8,7 +8,6 @@ import { BaseSystem } from "../BaseSystem";
  */
 class CameraSystem extends BaseSystem {
     /**
-     * 
      * @param scene 
      */
     constructor(scene: Scene) {
@@ -17,9 +16,9 @@ class CameraSystem extends BaseSystem {
     }
 
     Update(): void {
-        this.scene_.getComponents('PerspectiveCameraComponent')?.forEach((c, k) => {
+        // this.scene_.getComponents('OrbitCameraComponent')?.forEach((c, k) => {
 
-        });
+        // });
     }
 }
 

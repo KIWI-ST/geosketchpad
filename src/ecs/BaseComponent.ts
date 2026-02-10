@@ -34,7 +34,19 @@ abstract class BaseComponent {
         return this.componentTYPE_;
     }
 
+    /**
+     * @function enable
+     * @param b 
+     * @description component enable/disable.
+     */
     abstract enable(b: boolean): void;
+
+    /**
+     * @abstract
+     * @function update
+     * @description update component data.
+     */
+    abstract update(): void;
 }
 
 export {
