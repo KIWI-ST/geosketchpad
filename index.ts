@@ -2,6 +2,7 @@ import { vec3 } from "wgpu-matrix";
 import { OrbitCameraComponent, Scene } from "./src";
 import { PerspectiveCamera } from "@pipegpu/camera";
 import { PSEUDOMERCATOR } from "@pipegpu/geography";
+import { fetchMesh } from "./src/util/fetchMesh";
 
 (async () => {
 
@@ -18,7 +19,7 @@ import { PSEUDOMERCATOR } from "@pipegpu/geography";
     // const lng: number = 116.397128;
     // const lat: number = 39.917527;
     // const alt: number = 1000;
-    const camera = new PerspectiveCamera(60, W / H, 0.1, 10000000000, false);
+    const camera = new PerspectiveCamera(60.0, W / H, 0.1, 10000000000.0, false);
     camera.Position = vec3.create(-2178205.929902805, 4388519.719950141, 4071608.1284322627);
 
     // Ellipsoid
@@ -32,6 +33,9 @@ import { PSEUDOMERCATOR } from "@pipegpu/geography";
         cameraComponent.enable(true);
         scene.addComponent(cameraEntity.UUID, cameraComponent);
     }
+
+    const damagedHelment = await fetchMesh('http://127.0.0.1/service/DamagedHelmet/mesh/c00213fc53f414c0ebd8baa0a3101b040b9c1dd1c258f0389ee4ed5633b0a6f6.hdmf');
+
 
     // earth entity
     // const earthEntity = scene.createEntity();

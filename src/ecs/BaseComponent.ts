@@ -2,7 +2,7 @@
  * 
  */
 type ComponentTYPE =
-    `MeshComponent`
+    `HardwareDenseMeshFriendlyComponent`
     | `OrbitCameraComponent`
     | `MaterialComponent`
     | `LightComponent`

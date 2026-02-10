@@ -1,9 +1,10 @@
-import { Context } from "@pipegpu/core";
+import { Compiler, Context } from "@pipegpu/core";
 import { Scene } from './Scene'
 import type { IContextOpts } from "@pipegpu/core/src/compile/parseContextDesc";
 import { now } from "../util/now";
 import { RAF } from "../util/raf";
 import { TweenCache } from "../util/Tween";
+import { SceneBus } from "../bus/SceneBus";
 
 /**
  * 
@@ -42,18 +43,23 @@ declare module './Scene' {
         renderLoop(frameID: number): void;
         render(frameID: number, timeStamp: number): void;
         getContext3D(): Context;
+        getCompiler3D(): Compiler;
         _state_renderer_: {
             frameID: number;
             ctx3d: Context;
+            cpl3d: Compiler;
             lastTimeStamp: number;
             performance?: number;
-        }
+        };
     }
 }
 
 Scene.prototype.getContext3D = function (): Context {
-    const scene = this as Scene;
-    return scene._state_renderer_.ctx3d;
+    return this._state_renderer_.ctx3d;
+}
+
+Scene.prototype.getCompiler3D = function (): Compiler {
+    return this._state_renderer_.cpl3d;
 }
 
 Scene.prototype.renderLoop = function (frameID: number): void {
@@ -75,25 +81,14 @@ Scene.prototype.renderLoop = function (frameID: number): void {
  *
  */
 Scene.prototype.render = function (_frameID: number, _timeStamp: number): void {
-    // const scene = this as unknown as Scene;
-    // sceneBus.emit('frameStart');
-    // ecs system update
-    // sceneBus.emit('frameEnd');
-    // const camera = scene._state_camera_.camera, state = g._state_renderer_;
-    // const ctx3d: Context = g.getContext3D();
-    // ctx3d.clear({ color: [0.0, 0.0, 0.0, 1.0] });
-    //发起渲染事件
-    // g.emit('framestart', state.performance);
-    //发起辅助工具渲染调度
-    // g.callAuxtool(framestamp);
-    //渲染skpds
-    // const skpds = g.Sketchpads;
-    // skpds?.forEach(skpd => {
-    //     const r = skpd.Renderer;
-    //     r?.render(framestamp, camera)
-    // });
-    //渲染结束
-    // g.emit('frameend', state.performance);
+    // dispath: frame start
+    SceneBus.Handler.emit('FRAME_START');
+
+    // system update
+    this.systemUpdate(_timeStamp);
+
+    // dispath: frame end
+    SceneBus.Handler.emit('FRAME_END');
 }
 
 Scene.registerHook(
@@ -106,13 +101,18 @@ Scene.registerHook(
             selector: scene.Canvas,
             // requestFeatures: ['chromium-experimental-multi-draw-indirect']
         };
+        const context3d: Context = new Context(opts);
+        const compiler3d: Compiler = new Compiler(context3d);
+
         // init renderer state.
         scene._state_renderer_ = {
             frameID: 0,
             lastTimeStamp: 0,
-            ctx3d: new Context(opts)
+            ctx3d: context3d,
+            cpl3d: compiler3d,
         };
         await scene._state_renderer_.ctx3d.init();
+
         // startup main render loop
         scene.renderLoop(scene._state_renderer_.frameID);
     }

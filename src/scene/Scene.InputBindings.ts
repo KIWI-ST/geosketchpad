@@ -41,7 +41,7 @@ const WINDOW_EVENT_TYPES =
 declare module './Scene' {
     interface Scene {
         handleDOMEvent(e: Event): void;
-        _state_input_: {
+        _state_input_bindings_: {
             isMouseDown: boolean,
             isRightMouseDown: boolean,
             isKeyDown: boolean,
@@ -63,8 +63,7 @@ declare module './Scene' {
             };
             mouseStatus: {
                 [key: number]: boolean
-            }
-
+            };
         },
     }
 }
@@ -77,7 +76,7 @@ declare module './Scene' {
  */
 Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelEvent | KeyboardEvent): void {
     const scene = this;
-    const state = scene._state_input_;
+    const state = scene._state_input_bindings_;
 
     // prevent right mouse click default action.
     if (e.type === 'contextmenu') {
@@ -423,7 +422,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
 Scene.registerHook(
     async (scene: Scene) => {
         // init scene state.
-        scene._state_input_ = {
+        scene._state_input_bindings_ = {
             isMouseDown: false,
             isRightMouseDown: false,
             isKeyDown: false,

@@ -1,6 +1,6 @@
 import { Camera, clamp } from '@pipegpu/camera';
 import { BaseComponent } from '../BaseComponent';
-import { vec3, type Mat4, type Vec3 } from 'wgpu-matrix';
+import { mat4, vec3, type Mat4, type Vec3 } from 'wgpu-matrix';
 import { DOMBus, type DOMBusContext } from '../../bus/DOMBus';
 import type { Ellipsoid } from '@pipegpu/geography';
 
@@ -44,6 +44,11 @@ class OrbitCameraComponent extends BaseComponent {
     private isMainCamera_: boolean = false;
 
     /**
+     * 
+     */
+    private enableRTE_: boolean = false;
+
+    /**
      * camrea position in world space.
      * e.g 
      * (100, 200, 300);
@@ -83,6 +88,14 @@ class OrbitCameraComponent extends BaseComponent {
             radius: 0,
             sphericalPostion: vec3.clone(this.camera_.Position),
         };
+    }
+
+    /**
+     * 
+     * @param b 
+     */
+    public enableRTE(b: boolean): void {
+        this.enableRTE_ = b;
     }
 
     /**
@@ -196,6 +209,7 @@ class OrbitCameraComponent extends BaseComponent {
      * @returns 
      */
     private onPointerMove(c: DOMBusContext) {
+        //
         if (!this._state_.isMouseDown || !this.enable_) {
             return;
         }
@@ -253,7 +267,15 @@ class OrbitCameraComponent extends BaseComponent {
     }
 
     get ViewMatrix(): Mat4 {
-        return this.camera_.ViewMatrix;
+        const matrix: Mat4 = mat4.clone(this.camera_.ViewMatrix);
+        if (this.enableRTE_) {
+            matrix[12] = 0;
+            matrix[13] = 0;
+            matrix[14] = 0;
+            return matrix;
+        } else {
+            return this.camera_.ViewMatrix;
+        }
     }
 
     get ViewProjectionMatrix(): Mat4 {
@@ -267,6 +289,15 @@ class OrbitCameraComponent extends BaseComponent {
     get IsMainCamera(): boolean {
         return this.isMainCamera_;
     }
+
+    /**
+     * @description
+     */
+    get Camrea(): Camera {
+        return this.camera_;
+    }
+
+
 }
 
 export {
