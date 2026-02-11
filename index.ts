@@ -7,8 +7,12 @@ import { EllipsoidComponent } from "./src/ecs/component/EllipsoidComponent";
 
 (async () => {
 
-    const W = window.innerWidth - 30;
-    const H = window.innerHeight - 20;
+    // const W = window.innerWidth - 30;
+    // const H = window.innerHeight - 20;
+
+    const W = 800;
+    const H = 600;
+
     const scene: Scene = new Scene({
         width: W,
         height: H,
