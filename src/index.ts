@@ -1,8 +1,9 @@
 export * from './scene/Scene';
 export * from './scene/Scene.InputBindings';
 export * from './scene/Scene.Worker';
-export * from './scene/Scene.System';
 export * from './scene/Scene.Render';
+export * from './scene/Scene.System';
+
 
 export * from './ecs/BaseComponent';
 export * from './ecs/BaseEntity';

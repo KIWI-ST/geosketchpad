@@ -1,8 +1,6 @@
 import { IndexedStorageSnippet, OrderedGraph, VertexSnippet, ViewPlaneSnippet, ViewProjectionSnippet } from "@pipegpu/graph";
 import type { Scene } from "../../scene/Scene";
-import type { BaseComponent } from "../BaseComponent";
 import { BaseSystem } from "../BaseSystem";
-import type { MeshComponent } from "../component/HardwareDenseMeshFriendlyComponent";
 import { IndexedStorageBuffer, StorageBuffer, UniformBuffer, type BufferHandle } from "@pipegpu/core";
 
 /**
@@ -90,14 +88,14 @@ class RenderSystem extends BaseSystem {
      * foreach mesh components, regroup mesh vertex data.
      */
     private initVertex() {
-        const compiler = this.scene_._state_renderer_.cpl3d;
-        if (!this.resource_.VertexBuffer) {
-            const vertexSnippet = new VertexSnippet(compiler);
-            this.resource_.VertexBuffer = {
-                snippet: vertexSnippet,
-                vertexBuffer:
-            }
-        }
+        // const compiler = this.scene_._state_renderer_.cpl3d;
+        // if (!this.resource_.VertexBuffer) {
+        //     const vertexSnippet = new VertexSnippet(compiler);
+        //     this.resource_.VertexBuffer = {
+        //         snippet: vertexSnippet,
+        //         vertexBuffer:
+        //     }
+        // }
     }
 
     /**
@@ -115,7 +113,11 @@ class RenderSystem extends BaseSystem {
         this.initCamera();
 
 
-        this.initVertex();
+        // this.initVertex();
+
+        // renderOpaque()
+        // renderStataic
+        // renderDynmaic
         // this.initIndices();
         // this.initMeshlet();
 

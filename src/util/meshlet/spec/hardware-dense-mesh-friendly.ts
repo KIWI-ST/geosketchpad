@@ -30,76 +30,87 @@ static getSizePrefixedRootAsHardwareDenseMeshFriendly(bb:flatbuffers.ByteBuffer,
   return (obj || new HardwareDenseMeshFriendly()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
-boundingSphere(obj?:Vec4f):Vec4f|null {
+uuid():string|null
+uuid(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+uuid(optionalEncoding?:any):string|Uint8Array|null {
   const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+boundingSphere(obj?:Vec4f):Vec4f|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
   return offset ? (obj || new Vec4f()).__init(this.bb_pos + offset, this.bb!) : null;
 }
 
 vertices(index: number, obj?:Vertex):Vertex|null {
-  const offset = this.bb!.__offset(this.bb_pos, 6);
+  const offset = this.bb!.__offset(this.bb_pos, 8);
   return offset ? (obj || new Vertex()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
 }
 
 verticesLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 6);
+  const offset = this.bb!.__offset(this.bb_pos, 8);
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
 meshlets(index: number, obj?:Meshlet):Meshlet|null {
-  const offset = this.bb!.__offset(this.bb_pos, 8);
+  const offset = this.bb!.__offset(this.bb_pos, 10);
   return offset ? (obj || new Meshlet()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
 }
 
 meshletsLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 8);
+  const offset = this.bb!.__offset(this.bb_pos, 10);
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
 indices(index: number):number|null {
-  const offset = this.bb!.__offset(this.bb_pos, 10);
+  const offset = this.bb!.__offset(this.bb_pos, 12);
   return offset ? this.bb!.readUint32(this.bb!.__vector(this.bb_pos + offset) + index * 4) : 0;
 }
 
 indicesLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 10);
+  const offset = this.bb!.__offset(this.bb_pos, 12);
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
 indicesArray():Uint32Array|null {
-  const offset = this.bb!.__offset(this.bb_pos, 10);
+  const offset = this.bb!.__offset(this.bb_pos, 12);
   return offset ? new Uint32Array(this.bb!.bytes().buffer, this.bb!.bytes().byteOffset + this.bb!.__vector(this.bb_pos + offset), this.bb!.__vector_len(this.bb_pos + offset)) : null;
 }
 
 materialAsset(obj?:MaterialAsset):MaterialAsset|null {
-  const offset = this.bb!.__offset(this.bb_pos, 12);
+  const offset = this.bb!.__offset(this.bb_pos, 14);
   return offset ? (obj || new MaterialAsset()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
 samplerAssets(index: number, obj?:SamplerAsset):SamplerAsset|null {
-  const offset = this.bb!.__offset(this.bb_pos, 14);
+  const offset = this.bb!.__offset(this.bb_pos, 16);
   return offset ? (obj || new SamplerAsset()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
 }
 
 samplerAssetsLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 14);
+  const offset = this.bb!.__offset(this.bb_pos, 16);
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
 distanceVolumeData(obj?:DistanceFieldVolumeData):DistanceFieldVolumeData|null {
-  const offset = this.bb!.__offset(this.bb_pos, 16);
+  const offset = this.bb!.__offset(this.bb_pos, 18);
   return offset ? (obj || new DistanceFieldVolumeData()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
 static startHardwareDenseMeshFriendly(builder:flatbuffers.Builder) {
-  builder.startObject(7);
+  builder.startObject(8);
+}
+
+static addUuid(builder:flatbuffers.Builder, uuidOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, uuidOffset, 0);
 }
 
 static addBoundingSphere(builder:flatbuffers.Builder, boundingSphereOffset:flatbuffers.Offset) {
-  builder.addFieldStruct(0, boundingSphereOffset, 0);
+  builder.addFieldStruct(1, boundingSphereOffset, 0);
 }
 
 static addVertices(builder:flatbuffers.Builder, verticesOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(1, verticesOffset, 0);
+  builder.addFieldOffset(2, verticesOffset, 0);
 }
 
 static createVerticesVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
@@ -115,7 +126,7 @@ static startVerticesVector(builder:flatbuffers.Builder, numElems:number) {
 }
 
 static addMeshlets(builder:flatbuffers.Builder, meshletsOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(2, meshletsOffset, 0);
+  builder.addFieldOffset(3, meshletsOffset, 0);
 }
 
 static createMeshletsVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
@@ -131,7 +142,7 @@ static startMeshletsVector(builder:flatbuffers.Builder, numElems:number) {
 }
 
 static addIndices(builder:flatbuffers.Builder, indicesOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(3, indicesOffset, 0);
+  builder.addFieldOffset(4, indicesOffset, 0);
 }
 
 static createIndicesVector(builder:flatbuffers.Builder, data:number[]|Uint32Array):flatbuffers.Offset;
@@ -152,11 +163,11 @@ static startIndicesVector(builder:flatbuffers.Builder, numElems:number) {
 }
 
 static addMaterialAsset(builder:flatbuffers.Builder, materialAssetOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(4, materialAssetOffset, 0);
+  builder.addFieldOffset(5, materialAssetOffset, 0);
 }
 
 static addSamplerAssets(builder:flatbuffers.Builder, samplerAssetsOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(5, samplerAssetsOffset, 0);
+  builder.addFieldOffset(6, samplerAssetsOffset, 0);
 }
 
 static createSamplerAssetsVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
@@ -172,7 +183,7 @@ static startSamplerAssetsVector(builder:flatbuffers.Builder, numElems:number) {
 }
 
 static addDistanceVolumeData(builder:flatbuffers.Builder, distanceVolumeDataOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(6, distanceVolumeDataOffset, 0);
+  builder.addFieldOffset(7, distanceVolumeDataOffset, 0);
 }
 
 static endHardwareDenseMeshFriendly(builder:flatbuffers.Builder):flatbuffers.Offset {

@@ -36,11 +36,6 @@ class OrbitCameraComponent extends BaseComponent {
     /**
      * 
      */
-    private enable_: boolean = false;
-
-    /**
-     * 
-     */
     private isMainCamera_: boolean = false;
 
     /**
@@ -59,15 +54,9 @@ class OrbitCameraComponent extends BaseComponent {
     /**
      * 
      */
-    private ellipsoid_: Ellipsoid;
-
-    /**
-     * 
-     */
-    constructor(camera: Camera, ellipsoid: Ellipsoid) {
+    constructor(camera: Camera) {
         super('OrbitCameraComponent');
         this.camera_ = camera;
-        this.ellipsoid_ = ellipsoid;
         this._state_ = {
             autoRotate: true,
             autoRotateSpeed: 0.1,
@@ -102,8 +91,8 @@ class OrbitCameraComponent extends BaseComponent {
      * 
      * @param b 
      */
-    public override enable(b: boolean): void {
-        this.enable_ = b;
+    public override async enable(b: boolean): Promise<void> {
+        this.enabled_ = b;
         if (b) {
             this.registerEventListener();
         } else {
@@ -114,7 +103,7 @@ class OrbitCameraComponent extends BaseComponent {
     /**
      * 
      */
-    public override update(): void {
+    public override async update(): Promise<void> {
         let changed: boolean = false;
         let step = this._state_.isPanning ? 1.0 : this._state_.smooth;
         if (!vec3.equals(this._state_.positionCRT, this._state_.position)) {
@@ -181,9 +170,9 @@ class OrbitCameraComponent extends BaseComponent {
      * @param c 
      */
     private onZoom(c: DOMBusContext) {
-        c.delta = clamp(c.delta, -this.ellipsoid_.MaximumRadius, this.ellipsoid_.MaximumRadius);
-        this._state_.radius += c.delta * this._state_.zoomFactor;
-        this._state_.radius = clamp(this._state_.radius, -this.ellipsoid_.MaximumRadius, this.ellipsoid_.MaximumRadius);
+        // c.delta = clamp(c.delta, -this.ellipsoid_.MaximumRadius, this.ellipsoid_.MaximumRadius);
+        // this._state_.radius += c.delta * this._state_.zoomFactor;
+        // this._state_.radius = clamp(this._state_.radius, -this.ellipsoid_.MaximumRadius, this.ellipsoid_.MaximumRadius);
         this.RefreshCamera();
     }
 
@@ -210,7 +199,7 @@ class OrbitCameraComponent extends BaseComponent {
      */
     private onPointerMove(c: DOMBusContext) {
         //
-        if (!this._state_.isMouseDown || !this.enable_) {
+        if (!this._state_.isMouseDown || !this.enabled_) {
             return;
         }
 
@@ -296,8 +285,6 @@ class OrbitCameraComponent extends BaseComponent {
     get Camrea(): Camera {
         return this.camera_;
     }
-
-
 }
 
 export {

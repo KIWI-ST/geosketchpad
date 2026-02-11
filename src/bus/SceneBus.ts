@@ -8,9 +8,13 @@ type SceneBusContext = {
 
 };
 
+/**
+ * 
+ */
 type SceneBusEventTYPE =
     | 'FRAME_START'
     | 'FRAME_END'
+    | 'REVEAL_TILE'
     ;
 
 /**

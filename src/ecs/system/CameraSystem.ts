@@ -53,6 +53,10 @@ class CameraSystem extends BaseSystem {
         return !!this.mainCameraEntity_;
     }
 
+    get MainCamera(): Camera | undefined {
+        return this.mainCamera_;
+    }
+
     get ProjectionMatrix() {
         return this.mainCamera_?.ProjectionMatrix;
     }
