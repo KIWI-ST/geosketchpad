@@ -1,8 +1,12 @@
-import { Camera, clamp } from '@pipegpu/camera';
+import { Camera } from '@pipegpu/camera';
 import { BaseComponent } from '../BaseComponent';
-import { mat4, vec3, type Mat4, type Vec3 } from 'wgpu-matrix';
+import { mat4, mat4d, vec3, vec3d, type Mat4, type Mat4d, type Vec3, type Vec3d } from 'wgpu-matrix';
 import { DOMBus, type DOMBusContext } from '../../bus/DOMBus';
-import type { Ellipsoid } from '@pipegpu/geography';
+
+/**
+ * @description value torlance
+ */
+const EPSILON = 0.0000001;
 
 /**
  * @class OrbitCameraComponent
@@ -15,9 +19,9 @@ class OrbitCameraComponent extends BaseComponent {
     private _state_: {
         autoRotate: boolean,
         autoRotateSpeed: number,
-        position: Vec3;
-        positionCRT: Vec3;              // position in current.
-        target: Vec3;
+        position: Vec3d;
+        positionCRT: Vec3d;              // position in current.
+        target: Vec3d;
         rotateFactor: number;
         zoomFactor: number;
         panFactor: number;
@@ -30,7 +34,7 @@ class OrbitCameraComponent extends BaseComponent {
         theta: number,
         phi: number,
         radius: number,
-        sphericalPostion: Vec3,
+        sphericalPostion: Vec3d,
     };
 
     /**
@@ -58,10 +62,10 @@ class OrbitCameraComponent extends BaseComponent {
         super('OrbitCameraComponent');
         this.camera_ = camera;
         this._state_ = {
-            autoRotate: true,
+            autoRotate: false,
             autoRotateSpeed: 0.1,
-            position: vec3.clone(this.camera_.Position),
-            positionCRT: vec3.clone(this.camera_.Position),
+            position: vec3d.clone(this.camera_.Position),
+            positionCRT: vec3d.clone(this.camera_.Position),
             target: this.camera_.Target,
             rotateFactor: 0,
             zoomFactor: 0,
@@ -75,7 +79,7 @@ class OrbitCameraComponent extends BaseComponent {
             theta: 0,
             phi: 0,
             radius: 0,
-            sphericalPostion: vec3.clone(this.camera_.Position),
+            sphericalPostion: vec3d.clone(this.camera_.Position),
         };
     }
 
@@ -106,18 +110,18 @@ class OrbitCameraComponent extends BaseComponent {
     public override async update(): Promise<void> {
         let changed: boolean = false;
         let step = this._state_.isPanning ? 1.0 : this._state_.smooth;
-        if (!vec3.equals(this._state_.positionCRT, this._state_.position)) {
+        if (!vec3d.equals(this._state_.positionCRT, this._state_.position)) {
             this._state_.position = this.camera_.Position;
             step = 1;
             changed = true;
         }
-        if (!vec3.equals(this.camera_.Target, this._state_.target)) {
+        if (!vec3d.equals(this.camera_.Target, this._state_.target)) {
             this._state_.target = this.camera_.Target;
             step = 1;
             changed = true;
         }
         if (changed) {
-            this._state_.sphericalPostion = vec3.sub(this._state_.position, this._state_.target);
+            this._state_.sphericalPostion = vec3d.sub(this._state_.position, this._state_.target);
         }
         // auto rotate
         else if (!this._state_.isMouseDown && this._state_.autoRotate) {
@@ -129,9 +133,22 @@ class OrbitCameraComponent extends BaseComponent {
             const x: number = (this._state_.position[0] - this._state_.positionCRT[0]) / step;
             const y: number = (this._state_.position[1] - this._state_.positionCRT[1]) / step;
             const z: number = (this._state_.position[2] - this._state_.positionCRT[2]) / step;
-            this._state_.positionCRT[0] = x;
-            this._state_.positionCRT[1] = y;
-            this._state_.positionCRT[2] = z;
+
+            if (Math.abs(x) > EPSILON) {
+                this._state_.positionCRT[0] += x;
+            } else {
+                this._state_.positionCRT[0] = this._state_.position[0];
+            }
+            if (Math.abs(y) > EPSILON) {
+                this._state_.positionCRT[1] += y;
+            } else {
+                this._state_.positionCRT[1] = this._state_.position[1];
+            }
+            if (Math.abs(z) > EPSILON) {
+                this._state_.positionCRT[2] += z;
+            } else {
+                this._state_.positionCRT[2] = this._state_.position[2];
+            }
         }
         //
         this.camera_.Position = this._state_.positionCRT;
@@ -149,15 +166,15 @@ class OrbitCameraComponent extends BaseComponent {
          * @param radius 
          * @returns 
          */
-        const PostionInSphere = (phi: number, theta: number, radius: number): Vec3 => {
+        const PostionInSphere = (phi: number, theta: number, radius: number): Vec3d => {
             const sinPhiRadius = Math.sin(phi) * radius;
             const x = sinPhiRadius * Math.sin(theta);
             const y = Math.cos(phi) * radius;
             const z = sinPhiRadius * Math.cos(theta);
-            return vec3.create(x, y, z);
+            return vec3d.create(x, y, z);
         };
         let postion_ws = PostionInSphere(this._state_.phi, this._state_.theta, this._state_.radius);
-        this._state_.position = vec3.create(
+        this._state_.position = vec3d.create(
             postion_ws[0] + this._state_.target[0],
             postion_ws[1] + this._state_.target[1],
             postion_ws[2] + this._state_.target[2]
@@ -251,12 +268,12 @@ class OrbitCameraComponent extends BaseComponent {
         return this.camera_.Position;
     }
 
-    get ProjectionMatrix(): Mat4 {
+    get ProjectionMatrix(): Mat4d {
         return this.camera_.ProjectionMatrix;
     }
 
-    get ViewMatrix(): Mat4 {
-        const matrix: Mat4 = mat4.clone(this.camera_.ViewMatrix);
+    get ViewMatrix(): Mat4d {
+        const matrix: Mat4d = mat4d.clone(this.camera_.ViewMatrix);
         if (this.enableRTE_) {
             matrix[12] = 0;
             matrix[13] = 0;
@@ -267,7 +284,7 @@ class OrbitCameraComponent extends BaseComponent {
         }
     }
 
-    get ViewProjectionMatrix(): Mat4 {
+    get ViewProjectionMatrix(): Mat4d {
         return this.camera_.ViewProjectionMatrix;
     }
 

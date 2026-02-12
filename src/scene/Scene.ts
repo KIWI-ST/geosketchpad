@@ -147,14 +147,17 @@ class Scene {
     }
 
     /**
+     * WARNING, forEach runs 'await' error. 
      * @description
      */
     private async initHooks(): Promise<void> {
-        const scene = this as Scene;
-        Scene.hooks?.forEach(async hook => {
-            const { func, args = [] } = hook;
-            await func.apply(scene, [scene, ...args]);
-        });
+        if (Scene.hooks) {
+            const scene = this as Scene;
+            for (const hook of Scene.hooks) {
+                const { func, args = [] } = hook;
+                await func.apply(scene, [scene, ...args]);
+            }
+        }
     }
 
     /**

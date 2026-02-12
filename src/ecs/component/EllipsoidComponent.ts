@@ -1,6 +1,6 @@
 import { GeodeticCoordinate, QuadtreeTile, Rectangle, webMercatorTileSchema, type Ellipsoid, type QuadtreeTileSchema } from "@pipegpu/geography";
 import { BaseComponent } from "../BaseComponent";
-import { utils, vec3, vec4, type Vec3, type Vec4 } from "wgpu-matrix";
+import { utils, vec3, vec4, type Vec3, type Vec4, type Vec4d } from "wgpu-matrix";
 import { Camera, PerspectiveCamera } from "@pipegpu/camera";
 import type { CullingVolume } from "@pipegpu/camera/src/frustum/CullingVolume";
 
@@ -161,7 +161,7 @@ class EllipsoidComponent extends BaseComponent {
         let bInsect: boolean = true;
         // TODO:: set 0,0,0 to ellipsoid position.
         const sphere: Vec4 = vec4.create(0, 0, 0, this.ellipsoid_.MaximumRadius);
-        cullingVolume.Planes.forEach((plane: Vec4) => {
+        cullingVolume.Planes.forEach((plane: Vec4d) => {
             const center = vec3.create(sphere[0], sphere[1], sphere[2]);
             const radius = sphere[3];
             const planeNormal = vec3.create(plane[0], plane[1], plane[2]);
@@ -257,13 +257,11 @@ class EllipsoidComponent extends BaseComponent {
         if (!args || (args && !(args[0] instanceof Camera))) {
             console.warn(`[W][EllipsoidComponent] invalid main camera, skip update.`);
         }
-
         const camera: Camera = args[0] as Camera;
         // geometricError and maximumCameraHeight init.
-        if (!this.geometricErrors_ && !this.maximumCameraHeights_) {
+        if (this.geometricErrors_.length === 0 && this.maximumCameraHeights_.length === 0) {
             this.refreshQuadTree(camera.SseDenominator(), camera.ViewportHeight);
         }
-
         this.updateQuadtreeTileByDistanceError(camera);
     }
 }

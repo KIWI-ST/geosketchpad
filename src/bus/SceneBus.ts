@@ -9,7 +9,7 @@ type SceneBusContext = {
 };
 
 /**
- * 
+ * @description
  */
 type SceneBusEventTYPE =
     | 'FRAME_START'
@@ -18,6 +18,7 @@ type SceneBusEventTYPE =
     ;
 
 /**
+ * @description
  * receive all original (raw) document event
  * broadcast to other instance.
  */
