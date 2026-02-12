@@ -1,6 +1,6 @@
-import { GeodeticCoordinate, QuadtreeTile, Rectangle, webMercatorTileSchema, type Ellipsoid, type QuadtreeTileSchema } from "@pipegpu/geography";
+import { GeodeticCoordinate, QuadtreeTile, Ray, Rectangle, webMercatorTileSchema, type Ellipsoid, type QuadtreeTileSchema } from "@pipegpu/geography";
 import { BaseComponent } from "../BaseComponent";
-import { utils, vec3, vec4, type Vec3, type Vec4, type Vec4d } from "wgpu-matrix";
+import { vec2d, vec3d, vec4d, type Vec2d, type Vec3d, type Vec4d } from "wgpu-matrix";
 import { Camera, PerspectiveCamera } from "@pipegpu/camera";
 import type { CullingVolume } from "@pipegpu/camera/src/frustum/CullingVolume";
 
@@ -56,7 +56,7 @@ class EllipsoidComponent extends BaseComponent {
         return zeroLevelTiles;
     }
 
-    private pickZeroLevelQuadtreeTiles(position: Vec3): QuadtreeTile[] {
+    private pickZeroLevelQuadtreeTiles(position: Vec3d): QuadtreeTile[] {
         if (this.quadtreeTileSchema_ === webMercatorTileSchema) {
             return this.zeroLevelTiles_!;
         }
@@ -107,51 +107,109 @@ class EllipsoidComponent extends BaseComponent {
         return Math.sqrt(a * a + b * b + c * c) - quadtreeTile.SphereBoundary[3];
     }
 
-    private computeHorizonQuad(camera: Camera): Vec3[] {
+    private computeHorizonQuad(camera: Camera): Vec3d[] {
         const radii = this.ellipsoid_.Radii;
         const p = camera.Position;
-        const q = vec3.multiply(radii, p);
-        const qMagnitude = vec3.len(q);
-        const qUnit = vec3.normalize(q);
-        const UNIT_Z = vec3.create(0.0, 0.0, 1.0);
+        const q = vec3d.multiply(this.ellipsoid_.OneOverRadii, p);
+        const qMagnitude = vec3d.len(q);
+        const qUnit = vec3d.normalize(q);
+        const UNIT_Z = vec3d.create(0.0, 0.0, 1.0);
 
-        let eUnit: Vec3;
-        let nUnit: Vec3;
-        if (vec3.equals(qUnit, UNIT_Z)) {
-            eUnit = vec3.create(0, 1, 0);
-            nUnit = vec3.create(0, 0, 1);
+        let eUnit: Vec3d;
+        let nUnit: Vec3d;
+        if (vec3d.equals(qUnit, UNIT_Z)) {
+            eUnit = vec3d.create(0, 1, 0);
+            nUnit = vec3d.create(0, 0, 1);
         } else {
-            eUnit = vec3.normalize(vec3.cross(UNIT_Z, qUnit));
-            nUnit = vec3.normalize(vec3.cross(qUnit, eUnit));
+            eUnit = vec3d.normalize(vec3d.cross(UNIT_Z, qUnit));
+            nUnit = vec3d.normalize(vec3d.cross(qUnit, eUnit));
         }
 
-        const wMagnitude = Math.sqrt(vec3.lenSq(q) - 1.0);
-        const center = vec3.mulScalar(qUnit, 1.0 / qMagnitude);
+        const wMagnitude = Math.sqrt(vec3d.lenSq(q) - 1.0);
+        const center = vec3d.mulScalar(qUnit, 1.0 / qMagnitude);
         const scalar = wMagnitude / qMagnitude;
-        const eastOffset = vec3.mulScalar(eUnit, scalar);
-        const northOffset = vec3.mulScalar(nUnit, scalar);
+        const eastOffset = vec3d.mulScalar(eUnit, scalar);
+        const northOffset = vec3d.mulScalar(nUnit, scalar);
 
-        const horizonPoints = [vec3.create(), vec3.create(), vec3.create(), vec3.create()];
-        const upperLeft = vec3.add(center, northOffset, horizonPoints[0]);
-        vec3.subtract(upperLeft, eastOffset, upperLeft);
-        vec3.mul(radii, upperLeft, upperLeft);
+        const horizonPoints = [vec3d.create(), vec3d.create(), vec3d.create(), vec3d.create()];
+        const upperLeft = vec3d.add(center, northOffset, horizonPoints[0]);
+        vec3d.subtract(upperLeft, eastOffset, upperLeft);
+        vec3d.mul(radii, upperLeft, upperLeft);
 
-        const lowerLeft = vec3.subtract(center, northOffset, horizonPoints[1]);
-        vec3.subtract(lowerLeft, eastOffset, lowerLeft);
-        vec3.mul(radii, lowerLeft, lowerLeft);
+        const lowerLeft = vec3d.subtract(center, northOffset, horizonPoints[1]);
+        vec3d.subtract(lowerLeft, eastOffset, lowerLeft);
+        vec3d.mul(radii, lowerLeft, lowerLeft);
 
-        const lowerRight = vec3.subtract(center, northOffset, horizonPoints[2]);
-        vec3.add(lowerRight, eastOffset, lowerRight);
-        vec3.mul(radii, lowerRight, lowerRight);
+        const lowerRight = vec3d.subtract(center, northOffset, horizonPoints[2]);
+        vec3d.add(lowerRight, eastOffset, lowerRight);
+        vec3d.mul(radii, lowerRight, lowerRight);
 
-        const upperRight = vec3.add(center, northOffset, horizonPoints[3]);
-        vec3.add(upperRight, eastOffset, upperRight);
-        vec3.mul(radii, upperRight, upperRight);
+        const upperRight = vec3d.add(center, northOffset, horizonPoints[3]);
+        vec3d.add(upperRight, eastOffset, upperRight);
+        vec3d.mul(radii, upperRight, upperRight);
 
         return horizonPoints;
     }
 
-    private computeViewRectangle(camera: Camera) {
+    /**
+     * @description camera and elliposid realted.
+     * @param camera 
+     * @param windowPostion 
+     */
+    private computePickRay(camera: Camera, windowPosition: Vec2d): Ray {
+        if (camera instanceof PerspectiveCamera) {
+            const width = 600;
+            const height = 600;
+            const tanPhi = Math.tan(camera.Frustum.Fovy * 0.5);
+            const tanTheta = camera.Frustum.Aspect * tanPhi;
+            const near = camera.Frustum.Near;
+            const x = (2.0 / width) * windowPosition[0] - 1.0;
+            const y = (2.0 / height) * (height - windowPosition[1]) - 1.0;
+            const position = vec3d.clone(camera.Position);
+            const ray: Ray = new Ray(position, vec3d.create());
+            const nearCenter = vec3d.mulScalar(camera.Direction, near);
+            vec3d.add(ray.Position, nearCenter, nearCenter);
+            const xDir = vec3d.mulScalar(camera.Right, x * near * tanTheta);
+            const yDir = vec3d.mulScalar(camera.Up, y * near * tanPhi);
+            const direction = vec3d.add(nearCenter, xDir);
+            vec3d.add(direction, yDir, direction);
+            vec3d.subtract(direction, position, direction);
+            vec3d.normalize(direction, direction);
+            ray.Direction = direction;
+            return ray;
+        }
+        else {
+            throw new Error(`[E][computePickRay] unsupport camera pick.`);
+        }
+    }
+
+    /**
+     * 
+     * @param windowPostion the screen window posixiton in pixel.
+     * @param ellipsoid 
+     */
+    private cameraPickEllipsoid(camera: Camera, windowPostion: Vec2d, ellipsoid: Ellipsoid): Vec3d | undefined {
+        const ray: Ray = this.computePickRay(camera, windowPostion);
+        const intersection = ray.interscetEllipsoid(ellipsoid);
+        if (!intersection) {
+            return;
+        }
+        const t = intersection.Start > 0.0 ? intersection.Start : intersection.Stop;
+        return ray.at(t);
+    }
+
+    private addToResult(x: number, y: number, index: number, camera: Camera, ellipsoid: Ellipsoid, computedHorizonQuad: Vec3d[], cartoArray: GeodeticCoordinate[]): number {
+        const scratchPickCartesian2 = vec2d.create(x, y);
+        const r = this.cameraPickEllipsoid(camera, scratchPickCartesian2, ellipsoid);
+        if (r) {
+            cartoArray[index] = ellipsoid.spaceToGeographic(r);
+            return 1;
+        }
+        cartoArray[index] = ellipsoid.spaceToGeographic(computedHorizonQuad[index]);
+        return 0;
+    }
+
+    private computeViewRectangle(camera: Camera): Rectangle | undefined {
         let cullingVolume: CullingVolume;
         if (camera instanceof PerspectiveCamera) {
             cullingVolume = camera.Frustum.ComputeCullingVolume(camera.Position, camera.Direction, camera.Up);
@@ -160,39 +218,83 @@ class EllipsoidComponent extends BaseComponent {
         }
         let bInsect: boolean = true;
         // TODO:: set 0,0,0 to ellipsoid position.
-        const sphere: Vec4 = vec4.create(0, 0, 0, this.ellipsoid_.MaximumRadius);
+        const sphere: Vec4d = vec4d.create(0, 0, 0, this.ellipsoid_.MaximumRadius);
         cullingVolume.Planes.forEach((plane: Vec4d) => {
-            const center = vec3.create(sphere[0], sphere[1], sphere[2]);
+            const center = vec3d.create(sphere[0], sphere[1], sphere[2]);
             const radius = sphere[3];
-            const planeNormal = vec3.create(plane[0], plane[1], plane[2]);
+            const planeNormal = vec3d.create(plane[0], plane[1], plane[2]);
             const planeDistance = plane[3];
-            const distance = vec3.dot(planeNormal, center) + planeDistance;
+            const distance = vec3d.dot(planeNormal, center) + planeDistance;
+            // outside.
             if (distance < -radius) {
                 bInsect = false;
                 return;
             }
+            // intersecting.
+            else if (distance < radius) {
+
+            }
+            // inside.
+            else {
+
+            }
         });
         // visible
         if (bInsect) {
+            const width = 600;
+            const height = 600;
 
             const computedHorizonQuad = this.computeHorizonQuad(camera);
+            let cartoArray: GeodeticCoordinate[] = [];
             let successfulPickCount = 0;
-            // successfulPickCount += addToResult(
-            //     0,
-            //     0,
-            //     0,
-            //     this,
-            //     ellipsoid,
-            //     computedHorizonQuad,
-            // );
+            successfulPickCount += this.addToResult(
+                0,
+                0,
+                0,
+                camera,
+                this.ellipsoid_,
+                computedHorizonQuad,
+                cartoArray
+            );
+            successfulPickCount += this.addToResult(
+                0,
+                height,
+                1,
+                camera,
+                this.ellipsoid_,
+                computedHorizonQuad,
+                cartoArray,
+            );
+            successfulPickCount += this.addToResult(
+                width,
+                height,
+                2,
+                camera,
+                this.ellipsoid_,
+                computedHorizonQuad,
+                cartoArray
+            );
+            successfulPickCount += this.addToResult(
+                width,
+                0,
+                3,
+                camera,
+                this.ellipsoid_,
+                computedHorizonQuad,
+                cartoArray
+            );
 
+            // return whole globe
+            if (successfulPickCount < 2) {
+                return Rectangle.MAX_VALUE;
+            }
 
+            return Rectangle.fromCartoArray(cartoArray);
         }
-
     }
 
     private updateQuadtreeTileByDistanceError(camera: Camera) {
-        const position = vec3.clone(camera.Position);
+        const position = vec3d.clone(camera.Position);
         let level = 0;
         const rootTiles = this.pickZeroLevelQuadtreeTiles(position);
         const rawQuadtreeTiles: QuadtreeTile[] = [];

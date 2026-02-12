@@ -1,7 +1,7 @@
 import { vec3, vec3d } from "wgpu-matrix";
 import { OrbitCameraComponent, Scene } from "./src";
 import { PerspectiveCamera } from "@pipegpu/camera";
-import { PSEUDOMERCATOR, QuadtreeTileSchema, webMercatorTileSchema } from "@pipegpu/geography";
+import { PSEUDOMERCATOR, QuadtreeTileSchema, webMercatorTileSchema, WGS84 } from "@pipegpu/geography";
 import { fetchMesh } from "./src/util/fetchMesh";
 import { EllipsoidComponent } from "./src/ecs/component/EllipsoidComponent";
 
@@ -38,7 +38,7 @@ import { EllipsoidComponent } from "./src/ecs/component/EllipsoidComponent";
 
     const earthEntity = scene.createEntity();
     {
-        const earthComponent = new EllipsoidComponent(PSEUDOMERCATOR, webMercatorTileSchema);
+        const earthComponent = new EllipsoidComponent(WGS84, webMercatorTileSchema);
         scene.addComponent(earthEntity.UUID, earthComponent);
     }
 
