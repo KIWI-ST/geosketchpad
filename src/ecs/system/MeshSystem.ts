@@ -26,7 +26,7 @@ class MeshSystem extends BaseSystem {
         const camera = this.scene_._state_system_.cameraSystem.MainCamera!;
         // support meshlet component.
         this.scene_.getComponents('EllipsoidComponent')?.forEach((v: BaseComponent, _key: String) => {
-            (v as EllipsoidComponent).update(camera);
+            (v as EllipsoidComponent).update(camera, this.scene_.Canvas.clientWidth, this.scene_.Canvas.clientHeight);
         });
     }
 
