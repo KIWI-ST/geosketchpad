@@ -30,8 +30,6 @@ class EllipsoidComponent extends BaseComponent {
 
     private visualRevealTiles_?: QuadtreeTile[];
 
-    private sseDenominator_?: number;
-
     constructor(ellipsoid: Ellipsoid, quadtreeTileSchema: QuadtreeTileSchema) {
         super('EllipsoidComponent');
         this.ellipsoid_ = ellipsoid;
@@ -69,13 +67,15 @@ class EllipsoidComponent extends BaseComponent {
         return pickedZeroLevelQuadtreeTiles;
     }
 
+    // TODO::
+    // https://github.com/CesiumGS/cesium/blob/main/packages/engine/Source/Scene/QuadtreePrimitive.js
     private computeSpaceError = (quadtreeTile: QuadtreeTile, camera: Camera): number => {
         const level = quadtreeTile.Level,
             maxGeometricError = this.geometricErrors_[level],
-            sseDenominator = this.sseDenominator_,
+            sseDenominator = camera.SseDenominator(),
             height = this.viewportHeight_;
-        // const distance = this.camera.positionCartographic.height
-        const distance = 0.1;
+        const positionCartographic = this.ellipsoid_.spaceToGeographic(camera.Position);
+        const distance = positionCartographic.Altitude;
         return (maxGeometricError * height!) / (distance * sseDenominator!);
     }
 
@@ -113,52 +113,51 @@ class EllipsoidComponent extends BaseComponent {
         const rootTiles = this.pickZeroLevelQuadtreeTiles(cameraPosition);
         const rawQuadtreeTiles: QuadtreeTile[] = [];
         const renderingQuadtreeTiles: QuadtreeTile[] = [];
-        const rect = camera.ComputeViewRectangle(this.ellipsoid_, clientWidth, clientHeight);
+        const viewRect = camera.ComputeViewRectangle(this.ellipsoid_, clientWidth, clientHeight);
 
-        console.log(rect);
+        // no valid view rect area.
+        if (!viewRect) {
+            return;
+        }
 
-        // this.computevi(camera);
+        const IntersectQuadtreeTile = (qTile: QuadtreeTile): boolean => {
+            return viewRect.Intersect(qTile.Boundary);
+        };
 
-        // const viewRect: Rectangle = new Rectangle(
-        //     new GeodeticCoordinate(utils.radToDeg(viewRawRect.west), utils.radToDeg(viewRawRect.south)),
-        //     new GeodeticCoordinate(utils.radToDeg(viewRawRect.east), utils.radToDeg(viewRawRect.north)),
-        // );
-        // const IntersectQuadtreeTile = (qTile: QuadtreeTile): boolean => {
-        //     return viewRect.Intersect(qTile.Boundary);
-        // };
-        // const liter = (quadtreeTile: QuadtreeTile) => {
-        //     const distance = this.computeTileDistanceToCamera(quadtreeTile, camera);
-        //     if (distance > this.camera.positionCartographic.height * 20.0) {
-        //         return;
-        //     }
-        //     const error = this.computeSpaceError(quadtreeTile);
-        //     if (error > MAXIMUM_SCREEN_SPACEERROR) {
-        //         for (let i = 0; i < 4; i++) {
-        //             const child = quadtreeTile.Children[i];
-        //             if (IntersectQuadtreeTile(child)) {
-        //                 liter(child);
-        //             }
-        //         }
-        //     }
-        //     else {
-        //         const litLevel = quadtreeTile.Level;
-        //         level = litLevel > level ? litLevel : level;
-        //         rawQuadtreeTiles.push(quadtreeTile);
-        //     }
-        // };
-        // //calcute from root tile
-        // for (let i = 0, len = rootTiles.length; i < len; i++) {
-        //     liter(rootTiles[i]);
-        // }
-        // //filter level of tile
-        // for (let i = 0, len = rawQuadtreeTiles.length; i < len; i++) {
-        //     const quadtreeTile = rawQuadtreeTiles[i];
-        //     if (quadtreeTile.Level === level) {
-        //         renderingQuadtreeTiles.push(quadtreeTile);
-        //     }
-        // }
-        // this.level_ = level;
-        // this.visualRevealTiles_ = renderingQuadtreeTiles;
+        const liter = (quadtreeTile: QuadtreeTile) => {
+            const distance = this.computeTileDistanceToCamera(quadtreeTile, camera);
+            const positionCartographic = this.ellipsoid_.spaceToGeographic(camera.Position);
+            if (distance > positionCartographic.Altitude * 20.0) {
+                return;
+            }
+            const error = this.computeSpaceError(quadtreeTile, camera);
+            if (error > MAXIMUM_SCREEN_SPACEERROR) {
+                for (let i = 0; i < 4; i++) {
+                    const child = quadtreeTile.Children[i];
+                    if (IntersectQuadtreeTile(child)) {
+                        liter(child);
+                    }
+                }
+            }
+            else {
+                const litLevel = quadtreeTile.Level;
+                level = litLevel > level ? litLevel : level;
+                rawQuadtreeTiles.push(quadtreeTile);
+            }
+        };
+        //calcute from root tile
+        for (let i = 0, len = rootTiles.length; i < len; i++) {
+            liter(rootTiles[i]);
+        }
+        //filter level of tile
+        for (let i = 0, len = rawQuadtreeTiles.length; i < len; i++) {
+            const quadtreeTile = rawQuadtreeTiles[i];
+            if (quadtreeTile.Level === level) {
+                renderingQuadtreeTiles.push(quadtreeTile);
+            }
+        }
+        this.level_ = level;
+        this.visualRevealTiles_ = renderingQuadtreeTiles;
     }
 
     /**
