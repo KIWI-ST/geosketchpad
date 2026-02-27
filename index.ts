@@ -38,7 +38,7 @@ import { EllipsoidComponent } from "./src/ecs/component/EllipsoidComponent";
 
     const earthEntity = scene.createEntity();
     {
-        const earthComponent = new EllipsoidComponent(WGS84, webMercatorTileSchema);
+        const earthComponent: EllipsoidComponent = new EllipsoidComponent(WGS84, webMercatorTileSchema);
         scene.addComponent(earthEntity.UUID, earthComponent);
     }
 

@@ -1,4 +1,5 @@
 import type { Vec4 } from "wgpu-matrix";
+
 import { BaseComponent } from "../BaseComponent";
 
 /**
@@ -77,6 +78,9 @@ type HardwareDenseMeshFriendlyDesc = {
      */
     vaild_instance_spread_meshlet_count: number;
 
+    /**
+     * 
+     */
     instance_count: number;
 
     /**
