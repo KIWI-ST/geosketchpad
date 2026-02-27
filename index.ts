@@ -2,7 +2,7 @@ import { vec3, vec3d } from "wgpu-matrix";
 import { OrbitCameraComponent, Scene } from "./src";
 import { PerspectiveCamera } from "@pipegpu/camera";
 import { GeodeticCoordinate, PSEUDOMERCATOR, QuadtreeTileSchema, webMercatorTileSchema, WGS84 } from "@pipegpu/geography";
-import { fetchMesh } from "./src/util/fetchMesh";
+import { fetchHDMF } from "./src/util/fetchHDMF";
 import { EllipsoidComponent } from "./src/ecs/component/EllipsoidComponent";
 import { HardwareDenseMeshFriendlyComponent } from "./src/ecs/component/HardwareDenseMeshFriendlyComponent";
 
@@ -51,16 +51,6 @@ import { HardwareDenseMeshFriendlyComponent } from "./src/ecs/component/Hardware
         );
         scene.addComponent(earthEntity.UUID, hardwareDenseMeshFriendlyComponent);
     }
-
-    // const damagedHelment = await fetchMesh('http://127.0.0.1/service/DamagedHelmet/mesh/c00213fc53f414c0ebd8baa0a3101b040b9c1dd1c258f0389ee4ed5633b0a6f6.hdmf');
-    // earth entity
-    // const earthEntity = scene.createEntity();
-    // {
-    //     scene.addComponent(earthEntity.UUID, new EarthComponent());
-    // }
-    // coordinate: new GeodeticCoordinate(116.3958, 39.828)
-    // const earthEntity = scene.createEntity();
-
 })();
 
 

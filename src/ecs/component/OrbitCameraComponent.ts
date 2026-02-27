@@ -108,19 +108,22 @@ class OrbitCameraComponent extends BaseComponent {
     /**
      * 
      */
-    public override async update(): Promise<void> {
+    public override async update(..._args: any[]): Promise<void> {
         let changed: boolean = false;
         let step = this._state_.isPanning ? 1.0 : this._state_.smooth;
+
         if (!vec3d.equals(this._state_.positionCRT, this._state_.position)) {
             this._state_.position = this.camera_.Position;
             step = 1;
             changed = true;
         }
+
         if (!vec3d.equals(this.camera_.Target, this._state_.target)) {
             this._state_.target = this.camera_.Target;
             step = 1;
             changed = true;
         }
+
         if (changed) {
             this._state_.sphericalPostion = vec3d.sub(this._state_.position, this._state_.target);
         }
@@ -129,6 +132,7 @@ class OrbitCameraComponent extends BaseComponent {
             this._state_.theta -= this._state_.autoRotateSpeed * Math.PI / 180;
             this.RefreshCamera();
         }
+
         // learp camrea postion
         {
             const x: number = (this._state_.position[0] - this._state_.positionCRT[0]) / step;

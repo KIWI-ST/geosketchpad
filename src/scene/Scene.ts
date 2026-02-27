@@ -201,10 +201,26 @@ class Scene {
 
     /**
      * @param t 
-     * @returns 
+     * @returns {BaseComponent[]|undefined} 
      */
     public getComponents(t: ComponentTYPE): Map<string, BaseComponent> | undefined {
         return this.componentMap_.get(t);
+    }
+
+    /**
+     * 
+     * @param uuid 
+     * @param t 
+     * @returns 
+     */
+    public findComponents(uuid: string, t: ComponentTYPE): BaseComponent | undefined {
+        const components = this.getComponents(t);
+        if (components && components.has(uuid)) {
+            return components.get(uuid);
+        }
+        else {
+            return undefined;
+        }
     }
 }
 

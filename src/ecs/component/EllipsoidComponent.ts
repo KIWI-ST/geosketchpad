@@ -46,6 +46,14 @@ class EllipsoidComponent extends BaseComponent {
      */
     private visualRevealTiles_: QuadtreeTile[] = [];
 
+    public get Level(): number {
+        return this.level_;
+    }
+
+    public get VisualRevealTiles(): QuadtreeTile[] {
+        return this.visualRevealTiles_;
+    }
+
     /**
      * 
      * @param ellipsoid 
@@ -55,14 +63,6 @@ class EllipsoidComponent extends BaseComponent {
         super('EllipsoidComponent');
         this.ellipsoid_ = ellipsoid;
         this.quadtreeTileSchema_ = quadtreeTileSchema;
-    }
-
-    public get Level(): number {
-        return this.level_;
-    }
-
-    public get VisualRevealTiles(): QuadtreeTile[] {
-        return this.visualRevealTiles_;
     }
 
     private computeMaximumGeometricError(level: number) {

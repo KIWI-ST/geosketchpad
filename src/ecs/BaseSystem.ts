@@ -20,7 +20,7 @@ abstract class BaseSystem {
     /**
      * @description
      */
-    public abstract Update(): void;
+    public abstract Update(): Promise<void>;
 }
 
 export {
