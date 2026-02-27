@@ -1,8 +1,8 @@
-import { GeodeticCoordinate, QuadtreeTile, Ray, Rectangle, webMercatorTileSchema, type Ellipsoid, type QuadtreeTileSchema } from "@pipegpu/geography";
+import { GeodeticCoordinate, QuadtreeTile, webMercatorTileSchema, type Ellipsoid, type QuadtreeTileSchema } from "@pipegpu/geography";
+import { Camera } from "@pipegpu/camera";
+import { vec3d, type Vec3d } from "wgpu-matrix";
+
 import { BaseComponent } from "../BaseComponent";
-import { vec2d, vec3d, vec4d, type Vec2d, type Vec3d, type Vec4d } from "wgpu-matrix";
-import { Camera, PerspectiveCamera } from "@pipegpu/camera";
-import type { CullingVolume } from "@pipegpu/camera/src/frustum/CullingVolume";
 
 const MAXIMUM_SCREEN_SPACEERROR = 2.0;
 
@@ -16,24 +16,53 @@ class EllipsoidComponent extends BaseComponent {
      */
     private ellipsoid_: Ellipsoid;
 
+    /**
+     * 
+     */
     private quadtreeTileSchema_: QuadtreeTileSchema;
 
+    /**
+     * 
+     */
     private geometricErrors_: number[] = [];
 
+    /**
+     * 
+     */
     private maximumCameraHeights_: number[] = [];
 
-    private viewportHeight_?: number;
-
+    /**
+     * 
+     */
     private zeroLevelTiles_?: QuadtreeTile[];
 
-    private level_?: number;
+    /**
+     * 
+     */
+    private level_: number = 0;
 
-    private visualRevealTiles_?: QuadtreeTile[];
+    /**
+     * 
+     */
+    private visualRevealTiles_: QuadtreeTile[] = [];
 
+    /**
+     * 
+     * @param ellipsoid 
+     * @param quadtreeTileSchema 
+     */
     constructor(ellipsoid: Ellipsoid, quadtreeTileSchema: QuadtreeTileSchema) {
         super('EllipsoidComponent');
         this.ellipsoid_ = ellipsoid;
         this.quadtreeTileSchema_ = quadtreeTileSchema;
+    }
+
+    public get Level(): number {
+        return this.level_;
+    }
+
+    public get VisualRevealTiles(): QuadtreeTile[] {
+        return this.visualRevealTiles_;
     }
 
     private computeMaximumGeometricError(level: number) {
@@ -67,13 +96,18 @@ class EllipsoidComponent extends BaseComponent {
         return pickedZeroLevelQuadtreeTiles;
     }
 
-    // TODO::
-    // https://github.com/CesiumGS/cesium/blob/main/packages/engine/Source/Scene/QuadtreePrimitive.js
-    private computeSpaceError = (quadtreeTile: QuadtreeTile, camera: Camera): number => {
+    /**
+     * ref: https://github.com/CesiumGS/cesium/blob/main/packages/engine/Source/Scene/QuadtreePrimitive.js
+     * @param quadtreeTile 
+     * @param camera 
+     * @param {number} ch client height of canvas in pixel format.
+     * @returns 
+     */
+    private computeSpaceError = (quadtreeTile: QuadtreeTile, camera: Camera, ch: number): number => {
         const level = quadtreeTile.Level,
             maxGeometricError = this.geometricErrors_[level],
             sseDenominator = camera.SseDenominator(),
-            height = this.viewportHeight_;
+            height = ch;
         const positionCartographic = this.ellipsoid_.spaceToGeographic(camera.Position);
         const distance = positionCartographic.Altitude;
         return (maxGeometricError * height!) / (distance * sseDenominator!);
@@ -81,14 +115,13 @@ class EllipsoidComponent extends BaseComponent {
 
     /**
      * @param sseDenominator frustum sseDernmoinator
-     * @param viewportHeight viewport height, in pixel.
+     * @param ch client height in pixel format. without device ratio.
      */
-    private refreshQuadTree(sseDenominator: number, viewportHeight: number) {
-        // const sseDenominator = this.SseDenominator = (this.camera as any).frustum.sseDenominator;
+    private refreshQuadTree(sseDenominator: number, ch: number) {
         for (let i = 0; i <= 20; i++) {
             const geometricError = this.computeMaximumGeometricError(i);
             this.geometricErrors_[i] = geometricError;
-            this.maximumCameraHeights_[i] = geometricError * viewportHeight / (sseDenominator * MAXIMUM_SCREEN_SPACEERROR);
+            this.maximumCameraHeights_[i] = geometricError * ch / (sseDenominator * MAXIMUM_SCREEN_SPACEERROR);
         }
         this.zeroLevelTiles_ = this.computeLevelTilesZero();
     }
@@ -107,13 +140,20 @@ class EllipsoidComponent extends BaseComponent {
         return Math.sqrt(a * a + b * b + c * c) - quadtreeTile.SphereBoundary[3];
     }
 
-    private updateQuadtreeTileByDistanceError(camera: Camera, clientWidth: number, clientHeight: number) {
+    /**
+     * 
+     * @param camera 
+     * @param {number} cw client widht in pixel. 
+     * @param {number} ch client height in pixel. 
+     * @returns 
+     */
+    private updateQuadtreeTileByDistanceError(camera: Camera, cw: number, ch: number) {
         const cameraPosition = vec3d.clone(camera.Position);
         let level = 0;
         const rootTiles = this.pickZeroLevelQuadtreeTiles(cameraPosition);
         const rawQuadtreeTiles: QuadtreeTile[] = [];
         const renderingQuadtreeTiles: QuadtreeTile[] = [];
-        const viewRect = camera.ComputeViewRectangle(this.ellipsoid_, clientWidth, clientHeight);
+        const viewRect = camera.ComputeViewRectangle(this.ellipsoid_, cw, ch);
 
         // no valid view rect area.
         if (!viewRect) {
@@ -130,7 +170,7 @@ class EllipsoidComponent extends BaseComponent {
             if (distance > positionCartographic.Altitude * 20.0) {
                 return;
             }
-            const error = this.computeSpaceError(quadtreeTile, camera);
+            const error = this.computeSpaceError(quadtreeTile, camera, ch);
             if (error > MAXIMUM_SCREEN_SPACEERROR) {
                 for (let i = 0; i < 4; i++) {
                     const child = quadtreeTile.Children[i];
@@ -169,23 +209,28 @@ class EllipsoidComponent extends BaseComponent {
     }
 
     /**
-     * 
+     * @param {Camera} args[0], instance of camera. main camera component.
+     * @param {number} args[1], client width, canvas client width of pixel, without device ratio. e.g as '600'
+     * @param {number} args[2], client height, canvas client width of pixel, without device ratio. e.g as '600'
      */
     public override async update(...args: any[]): Promise<void> {
         if (!args || (args && !(args[0] instanceof Camera))) {
             console.warn(`[W][EllipsoidComponent] invalid main camera, skip update.`);
         }
-
-        const cw: number = (args[1] || 600) as number;
-        const ch: number = (args[2] || 600) as number;
         const camera: Camera = args[0] as Camera;
+
         // geometricError and maximumCameraHeight init.
+        const cw: number = (args[1]) as number;
+        const ch: number = (args[2]) as number;
         if (this.geometricErrors_.length === 0 && this.maximumCameraHeights_.length === 0) {
             this.refreshQuadTree(camera.SseDenominator(), ch);
         }
 
+        // 
         this.updateQuadtreeTileByDistanceError(camera, cw, ch);
     }
+
+
 }
 
 export {
