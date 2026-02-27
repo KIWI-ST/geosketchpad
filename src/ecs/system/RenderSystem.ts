@@ -105,7 +105,6 @@ class RenderSystem extends BaseSystem {
     public override async Update(): Promise<void> {
         // main camera.
         if (!this.scene_._state_system_.cameraSystem.hasMainCamera()) {
-            console.warn(`[W][RenderSystem][Update] render system skip frame, due to missing main camera.`);
             return;
         }
 

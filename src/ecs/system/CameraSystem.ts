@@ -33,7 +33,6 @@ class CameraSystem extends BaseSystem {
     public override async Update(): Promise<void> {
         const cameraComponents = this.scene_.getComponents('OrbitCameraComponent');
         if (!cameraComponents) {
-            console.warn(`[W][CameraSystem][Update] OrbitCameraComponent components missing.`);
             return;
         }
 

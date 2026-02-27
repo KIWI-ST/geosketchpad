@@ -2,7 +2,6 @@ import { vec3, vec3d } from "wgpu-matrix";
 import { OrbitCameraComponent, Scene } from "./src";
 import { PerspectiveCamera } from "@pipegpu/camera";
 import { GeodeticCoordinate, PSEUDOMERCATOR, QuadtreeTileSchema, webMercatorTileSchema, WGS84 } from "@pipegpu/geography";
-import { fetchHDMF } from "./src/util/fetchHDMF";
 import { EllipsoidComponent } from "./src/ecs/component/EllipsoidComponent";
 import { HardwareDenseMeshFriendlyComponent } from "./src/ecs/component/HardwareDenseMeshFriendlyComponent";
 
