@@ -1,9 +1,8 @@
 import type { Mat4d, Vec2d, Vec4d } from "wgpu-matrix";
+import { GeodeticCoordinate, QuadtreeTile } from "@pipegpu/geography";
+import type { Instance, KTXPackData } from "@pipegpu/spec";
 
 import { BaseComponent } from "../BaseComponent";
-import { GeodeticCoordinate, QuadtreeTile } from "@pipegpu/geography";
-import type { Instance } from "../../util/fetchHDMF";
-import type { KTXPackData } from "../../util/fetchKTX";
 
 /**
  * @description Mesh（网格体）描述信息
