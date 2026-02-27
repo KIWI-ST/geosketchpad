@@ -1,12 +1,13 @@
 import { Camera } from '@pipegpu/camera';
+import { mat4d, vec3d, type Mat4d, type Vec3d } from 'wgpu-matrix';
+
 import { BaseComponent } from '../BaseComponent';
-import { mat4, mat4d, vec3, vec3d, type Mat4, type Mat4d, type Vec3, type Vec3d } from 'wgpu-matrix';
 import { DOMBus, type DOMBusContext } from '../../bus/DOMBus';
 
 /**
  * @description value torlance
  */
-const EPSILON = 0.0000001;
+const EPSILON7 = 0.0000001;
 
 /**
  * @class OrbitCameraComponent
@@ -134,17 +135,17 @@ class OrbitCameraComponent extends BaseComponent {
             const y: number = (this._state_.position[1] - this._state_.positionCRT[1]) / step;
             const z: number = (this._state_.position[2] - this._state_.positionCRT[2]) / step;
 
-            if (Math.abs(x) > EPSILON) {
+            if (Math.abs(x) > EPSILON7) {
                 this._state_.positionCRT[0] += x;
             } else {
                 this._state_.positionCRT[0] = this._state_.position[0];
             }
-            if (Math.abs(y) > EPSILON) {
+            if (Math.abs(y) > EPSILON7) {
                 this._state_.positionCRT[1] += y;
             } else {
                 this._state_.positionCRT[1] = this._state_.position[1];
             }
-            if (Math.abs(z) > EPSILON) {
+            if (Math.abs(z) > EPSILON7) {
                 this._state_.positionCRT[2] += z;
             } else {
                 this._state_.positionCRT[2] = this._state_.position[2];

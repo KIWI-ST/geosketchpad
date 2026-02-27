@@ -106,7 +106,7 @@ class EllipsoidComponent extends BaseComponent {
     private computeSpaceError = (quadtreeTile: QuadtreeTile, camera: Camera, ch: number): number => {
         const level = quadtreeTile.Level,
             maxGeometricError = this.geometricErrors_[level],
-            sseDenominator = camera.SseDenominator(),
+            sseDenominator = camera.getSseDenominator(),
             height = ch;
         const positionCartographic = this.ellipsoid_.spaceToGeographic(camera.Position);
         const distance = positionCartographic.Altitude;
@@ -223,14 +223,12 @@ class EllipsoidComponent extends BaseComponent {
         const cw: number = (args[1]) as number;
         const ch: number = (args[2]) as number;
         if (this.geometricErrors_.length === 0 && this.maximumCameraHeights_.length === 0) {
-            this.refreshQuadTree(camera.SseDenominator(), ch);
+            this.refreshQuadTree(camera.getSseDenominator(), ch);
         }
 
         // 
         this.updateQuadtreeTileByDistanceError(camera, cw, ch);
     }
-
-
 }
 
 export {

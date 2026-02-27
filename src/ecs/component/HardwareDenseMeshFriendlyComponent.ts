@@ -1,6 +1,7 @@
 import type { Vec4 } from "wgpu-matrix";
 
 import { BaseComponent } from "../BaseComponent";
+import { GeodeticCoordinate } from "@pipegpu/geography";
 
 /**
  * @description
@@ -115,19 +116,20 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
     /**
      * 
      */
-    // private hdmf_: HardwareDenseMeshFriendly;
-
     private rootUri_: string;
 
     private hardwareDenseMeshFriendlyDesc_?: HardwareDenseMeshFriendlyDesc;
+
+    private loc_: GeodeticCoordinate;
 
     /**
      * @description hdmf service.
      * @param {string} rootUri, the root dir of hdmf service. e.g http://127.0.0.1/service/DamagedHelmet/
      */
-    constructor(rootUri: string) {
+    constructor(rootUri: string, loc: GeodeticCoordinate = new GeodeticCoordinate(0.0, 0.0)) {
         super('HardwareDenseMeshFriendlyComponent');
         this.rootUri_ = rootUri;
+        this.loc_ = loc;
     }
 
     private async initRoot(): Promise<void> {
