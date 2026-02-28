@@ -3,7 +3,7 @@ import { OrbitCameraComponent, Scene } from "./src";
 import { PerspectiveCamera } from "@pipegpu/camera";
 import { GeodeticCoordinate, PSEUDOMERCATOR, QuadtreeTileSchema, webMercatorTileSchema, WGS84 } from "@pipegpu/geography";
 import { EllipsoidComponent } from "./src/ecs/component/EllipsoidComponent";
-import { HardwareDenseMeshFriendlyComponent } from "./src/ecs/component/HardwareDenseMeshFriendlyComponent";
+import { HDMFComponent } from "./src/ecs/component/HDMFComponent";
 
 (async () => {
 
@@ -41,13 +41,15 @@ import { HardwareDenseMeshFriendlyComponent } from "./src/ecs/component/Hardware
     const earthEntity = scene.createEntity();
     {
         const earthComponent: EllipsoidComponent = new EllipsoidComponent(WGS84, webMercatorTileSchema);
+        await earthComponent.enable(true);
         scene.addComponent(earthEntity.UUID, earthComponent);
     }
     {
-        const hardwareDenseMeshFriendlyComponent: HardwareDenseMeshFriendlyComponent = new HardwareDenseMeshFriendlyComponent(
+        const hardwareDenseMeshFriendlyComponent: HDMFComponent = new HDMFComponent(
             `http://127.0.0.1/service/DamagedHelmet/`,
             new GeodeticCoordinate(116.397128, 39.917527)
         );
+        await hardwareDenseMeshFriendlyComponent.enable(true);
         scene.addComponent(earthEntity.UUID, hardwareDenseMeshFriendlyComponent);
     }
 })();

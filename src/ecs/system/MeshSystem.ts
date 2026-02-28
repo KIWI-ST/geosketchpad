@@ -1,8 +1,7 @@
-import type { Mat4d } from "wgpu-matrix";
 import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
 import type { EllipsoidComponent } from "../component/EllipsoidComponent";
-import type { HardwareDenseMeshFriendlyComponent } from "../component/HardwareDenseMeshFriendlyComponent";
+import type { HDMFComponent } from "../component/HDMFComponent";
 
 /**
  * @description MeshSystem
@@ -19,6 +18,7 @@ class MeshSystem extends BaseSystem {
     }
 
     public override async Update(): Promise<void> {
+
         if (!this.scene_._state_system_.cameraSystem.hasMainCamera()) {
             return;
         }
@@ -31,33 +31,35 @@ class MeshSystem extends BaseSystem {
         // update all ellipsoid components.
         const ellipsoidComponents = this.scene_.getComponents('EllipsoidComponent');
         if (ellipsoidComponents) {
-            const keys = Array.from(ellipsoidComponents.keys());
-            const len = keys.length;
-            for (let k = 0; k < len; k++) {
-                const key = keys[k];
-                const c = ellipsoidComponents.get(key) as EllipsoidComponent;
-                await c.update(camera, cw, ch);
+            for (const [key, c] of ellipsoidComponents) {
+                try {
+                    const ellipsoidComponent = c as EllipsoidComponent;
+                    await ellipsoidComponent.update(camera, cw, ch);
+                }
+                catch (err) {
+                    console.error(`[E][MeshSystem][Update] type 'EllipsoidComponent' update failed, key: ${key}.`);
+                }
             }
         }
 
         // update all hdmf component.
-        const hardwareDenseMeshFriendlyComponents = this.scene_.getComponents('HardwareDenseMeshFriendlyComponent');
-        if (hardwareDenseMeshFriendlyComponents) {
-            const keys = Array.from(hardwareDenseMeshFriendlyComponents.keys());
-            const len = keys.length;
-            for (let k = 0; k < len; k++) {
-                const key = keys[k];
-                const c = hardwareDenseMeshFriendlyComponents.get(key) as HardwareDenseMeshFriendlyComponent;
-                // const depC = this.scene_.findComponents(key, 'EllipsoidComponent');
-                const depC = ellipsoidComponents?.get(key);
-                if (depC) {
-                    const actualDepC = depC as EllipsoidComponent;
-                    await c.update(actualDepC.VisualRevealTiles, actualDepC.Level);
-                } else {
-                    await c.update();
+        const hdmfComponents = this.scene_.getComponents('HardwareDenseMeshFriendlyComponent');
+        if (hdmfComponents) {
+            for (const [key, c] of hdmfComponents) {
+                try {
+                    const hdmfComponent = c as HDMFComponent;
+                    const depC = ellipsoidComponents?.get(key);
+                    if (depC) {
+                        const actualDepC = depC as EllipsoidComponent;
+                        await hdmfComponent.update(actualDepC.VisualRevealTiles, actualDepC.Level);
+                    }
+                }
+                catch (err) {
+                    console.error(`[E][MeshSystem][Update] type 'HardwareDenseMeshFriendlyComponent' update failed, key: ${key}.`);
                 }
             }
         }
+
     }
 
 }

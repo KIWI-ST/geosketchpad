@@ -217,9 +217,9 @@ class EllipsoidComponent extends BaseComponent {
         if (!args || (args && !(args[0] instanceof Camera))) {
             console.warn(`[W][EllipsoidComponent] invalid main camera, skip update.`);
         }
-        const camera: Camera = args[0] as Camera;
 
         // geometricError and maximumCameraHeight init.
+        const camera: Camera = args[0] as Camera;
         const cw: number = (args[1]) as number;
         const ch: number = (args[2]) as number;
         if (this.geometricErrors_.length === 0 && this.maximumCameraHeights_.length === 0) {
