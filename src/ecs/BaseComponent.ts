@@ -59,7 +59,7 @@ abstract class BaseComponent {
      * @description update component data.
      * support any args if need.
      */
-    abstract update(...args: any[]): Promise<void>;
+    // abstract update(...args: any[]): Promise<void>;
 }
 
 export {

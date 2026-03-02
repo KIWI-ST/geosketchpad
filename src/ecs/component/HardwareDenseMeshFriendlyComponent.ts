@@ -1,14 +1,9 @@
 import type { Mat4d, Vec2d, Vec4d } from "wgpu-matrix";
 import { GeodeticCoordinate, QuadtreeTile } from "@pipegpu/geography";
-import { fetchHDMF, fetchTileData as fetchTileData, fetchMetaData, parseHDMFv2, type InstanceItem, type KTXPackData, type MaterialItem, type MeshItem, type MetaData } from "@pipegpu/spec";
+import { fetchHDMF, fetchTileData as fetchTileData, fetchMetaData, parseHDMFv2, type InstanceItem, type KTXPackData, type MaterialItem, type MeshItem, type MetaData, fetchKTX2AsBc7RGBA, type ScalerItem } from "@pipegpu/spec";
 import { BaseComponent } from "../BaseComponent";
 
 const ERROR_CODE = -1;
-
-type RuntimeMeshTYPE = {
-    runtimeID: number,
-    meshletCount: number
-};
 
 type DrawIndexedIndirect = {
     index_count: number,
@@ -29,7 +24,7 @@ type LoadingStatus = 'done' | 'pending';
  * @class MeshComponent
  * @description
  */
-class HDMFComponent extends BaseComponent {
+class HardwareDenseMeshFriendlyComponent extends BaseComponent {
     /**
      * 
      */
@@ -48,17 +43,22 @@ class HDMFComponent extends BaseComponent {
     /**
      * 场景运行时 TILE 集.
      */
-    private rtTileset: Set<string> = new Set();
+    private runtimeTileset: Set<string> = new Set();
 
     /**
      * 记录运行时 isntance 的 ID.
      */
-    private instanceDescRuntimeMap: Map<string, number> = new Map();
+    private instanceDescRuntimeMap: Map<string, InstanceItem> = new Map();
 
     /**
-     * 记录运行时 mesh 的 ID.
+     * 记录运行时mesh(hdmf)庶几乎.
      */
-    private meshDescRuntimeMap: Map<string, RuntimeMeshTYPE> = new Map();
+    private meshDescRuntimeMap: Map<string, MeshItem | undefined> = new Map();
+
+    /**
+     * 记录运行时加载的ktx2.0
+     */
+    private textureRuntimeMap: Map<string, KTXPackData> = new Map();
 
     /**
      * 
@@ -71,15 +71,48 @@ class HDMFComponent extends BaseComponent {
     private waitRequestInstanceQueue: InstanceItem[] = [];
 
     /**
-     * CPU端数据副本
-     */
-    private meshItemQueue: MeshItem[] = [];
-
-    /**
      * 
      */
     private loadingStatus: LoadingStatus = 'done';
 
+    /**
+     * 
+     */
+    public get MetaData(): MetaData {
+        if (this.metaData) {
+            return this.metaData;
+        }
+        else {
+            throw new Error('[E][HardwareDenseMeshFriendlyComponent] invalid metadata. please init first first.')
+        }
+    }
+
+    public get VertexByteLength() {
+        if (this.metaData) {
+            return this.metaData.vertex_byte_length;
+        }
+        else {
+            throw new Error('[E][HardwareDenseMeshFriendlyComponent] invalid metadata. please init first first.')
+        }
+    }
+
+    public get IndicesByteLength() {
+        if (this.metaData) {
+            return this.metaData.indices_byte_length;
+        }
+        else {
+            throw new Error('[E][HardwareDenseMeshFriendlyComponent] invalid metadata. please init first first.')
+        }
+    }
+
+    public get MeshletIndicesByteLength() {
+        if (this.metaData) {
+            return this.metaData.meshlet_indices_byte_length;
+        }
+        else {
+            throw new Error('[E][HardwareDenseMeshFriendlyComponent] invalid metadata. please init first first.')
+        }
+    }
 
     /**
      * @description hdmf service.
@@ -102,6 +135,50 @@ class HDMFComponent extends BaseComponent {
     }
 
     /**
+     * @description request ktx 
+     * @param item 
+     */
+    private loadTexture = async (item: MaterialItem): Promise<void> => {
+        const Load = async (scaler: ScalerItem): Promise<void> => {
+            const key = scaler.texture_uuid;
+            if (!key || (key && key.trim().length === 0)) {
+                return;
+            }
+            const uri = `${this.rootDir}${this.metaData?.texture_dir}${key}.ktx2`;
+            fetchKTX2AsBc7RGBA(uri, key).then((pack) => {
+                if (pack) {
+                    this.textureRuntimeMap.set(pack.key, pack);
+                } else {
+                    console.error(`[E][loadTexture] load texture error. requet uri: ${uri}`);
+                }
+            });
+        };
+
+        await Load(item.pbr.base_color);
+        await Load(item.pbr.metallic);
+        await Load(item.pbr.roughness);
+        await Load(item.pbr.emissive);
+        await Load(item.pbr.sheen_color);
+        await Load(item.pbr.sheen_roughness);
+        await Load(item.pbr.clearcoat);
+        await Load(item.pbr.clearcoat_roughness);
+        await Load(item.pbr.clearcoat_normal);
+        await Load(item.pbr.anisotropy);
+        await Load(item.pbr.transmission);
+        await Load(item.pbr.volume_thickness);
+
+        await Load(item.phong.diffuse);
+        await Load(item.phong.specular);
+        await Load(item.phong.shiness);
+        await Load(item.phong.ambient);
+        await Load(item.phong.emissive);
+        await Load(item.phong.reflectivity);
+
+        await Load(item.baked.ambient_occlusion);
+        await Load(item.baked.light_map);
+    }
+
+    /**
      * 以instance为单位，请求资源：
      * - instance
      * - instance desc
@@ -116,29 +193,25 @@ class HDMFComponent extends BaseComponent {
      * - hdmf indices
      * - hdmf bounds with lod
      */
-    private reqInstance = async (): Promise<void> => {
-        // 1. instance 不存在或 mesh 已加载，取消请求.
-        const instance = this.waitRequestInstanceQueue.shift();
-        if (!instance) {
-            return;
-        }
-
-        // 2. 装配 mesh： 未添加的 mesh 在此装配成 meshDesc
-        if (!this.meshDescRuntimeMap.has(instance.mesh_uuid)) {
-            this.meshDescRuntimeMap.set(
-                instance.mesh_uuid,
-                {
-                    runtimeID: ERROR_CODE,
-                    meshletCount: ERROR_CODE
-                }
-            );
+    private loadInstance = async (instance: InstanceItem): Promise<void> => {
+        // 装配 mesh： 未添加的 mesh 在此装配成 meshDesc
+        const mesh_uuid: string = instance.mesh_uuid;
+        if (!this.meshDescRuntimeMap.has(mesh_uuid)) {
+            // fill runtime mesh map with undefined.
+            this.meshDescRuntimeMap.set(mesh_uuid, undefined);
             // 直接请求 .hdmf 并解析
             // TODO:: request in web workers.
             const uri = `${this.rootDir}${this.metaData?.mesh_dir}/${instance.mesh_uuid}.hdmf`;
             const u8arr = await fetchHDMF(uri);
             if (u8arr) {
                 const mesh_item = parseHDMFv2(u8arr);
-                this.meshItemQueue.push(mesh_item);
+                if (this.meshDescRuntimeMap.has(mesh_item.uuid)) {
+                    this.meshDescRuntimeMap.set(mesh_item.uuid, mesh_item);
+                    // allow load texture async
+                    await this.loadTexture(mesh_item.material);
+                } else {
+                    console.warn(`[W][enqueue] parseHMDFv2 error, missing pre request.`)
+                }
             } else {
                 this.meshDescRuntimeMap.delete(instance.mesh_uuid);
             }
@@ -190,40 +263,36 @@ class HDMFComponent extends BaseComponent {
     }
 
     /**
-     * data update.
+     * @description
+     *  - tile
+     *  - request meta data.
+     *  - for service.
      * @param _args 
      */
-    public override async update(..._args: any[]): Promise<void> {
-        // 1. 处理instance
-        const LIMIT = 6;
-        for (let k = 0; k < LIMIT; k++) {
-            this.reqInstance();
+    public async update(visualRevealTiles: QuadtreeTile[], LIMIT: number): Promise<number> {
+        // do enqueue, cost compute limit.
+        let item = this.waitRequestInstanceQueue.shift();
+        while (LIMIT > 0 && item) {
+            await this.loadInstance(item!);
+            LIMIT--;
+            item = this.waitRequestInstanceQueue.shift();
         }
-
-        // 2. 处理tile
-        // request meta data.
-        // for service.
-        const visualRevealTiles = _args[0] as QuadtreeTile[];
-
         // instance 未处理完，取消处理等待下次调用
         if (this.waitRequestInstanceQueue.length > 0 || this.loadingStatus !== 'done' || !visualRevealTiles || visualRevealTiles.length === 0) {
-            return;
+            return LIMIT;
         }
-
         // 预处理，过滤已加载/无需加载/服务端不存在的瓦片，避免重复请求
         const validTiles = visualRevealTiles.filter(tile => {
             if (!tile) {
                 return false;
             }
             const tileKey = `${tile?.X}_${tile?.Y}_${tile?.Level}.json`;
-            return !this.rtTileset.has(tileKey) && this.serverTileset.has(tileKey);
+            return !this.runtimeTileset.has(tileKey) && this.serverTileset.has(tileKey);
         });
-
         // 无需处理
         if (validTiles.length === 0) {
-            return;
+            return LIMIT;
         }
-
         // TODO:: 优化性能，无需加载的json可终止请求
         this.loadingStatus = 'pending';
         for (const tile of validTiles) {
@@ -232,7 +301,7 @@ class HDMFComponent extends BaseComponent {
             const tileData = await fetchTileData(tileUri, tileKey);
             // 如果没有返回数据，直接跳过不阻塞
             if (!tileData) {
-                console.warn(`[W] missing tile data. key ${tileKey}`);
+                console.warn(`[W][HardwareDenseMeshFriendlyComponent] missing tile data. key ${tileKey}`);
                 continue;
             }
             // request tiles by visual reveal tile queue.
@@ -241,12 +310,14 @@ class HDMFComponent extends BaseComponent {
                     this.waitRequestInstanceQueue.push(instance);
                 }
             }
-            this.rtTileset.add(tileKey);
+            this.runtimeTileset.add(tileKey);
         }
         this.loadingStatus = 'done';
+        // remain compute limit.
+        return LIMIT;
     }
 }
 
 export {
-    HDMFComponent
+    HardwareDenseMeshFriendlyComponent
 }

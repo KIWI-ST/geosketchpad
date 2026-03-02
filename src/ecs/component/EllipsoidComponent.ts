@@ -83,6 +83,11 @@ class EllipsoidComponent extends BaseComponent {
         return zeroLevelTiles;
     }
 
+    /**
+     * 
+     * @param position 
+     * @returns 
+     */
     private pickZeroLevelQuadtreeTiles(position: Vec3d): QuadtreeTile[] {
         if (this.quadtreeTileSchema_ === webMercatorTileSchema) {
             return this.zeroLevelTiles_!;
@@ -149,7 +154,6 @@ class EllipsoidComponent extends BaseComponent {
      */
     private updateQuadtreeTileByDistanceError(camera: Camera, cw: number, ch: number) {
         const cameraPosition = vec3d.clone(camera.Position);
-        let level = 0;
         const rootTiles = this.pickZeroLevelQuadtreeTiles(cameraPosition);
         const rawQuadtreeTiles: QuadtreeTile[] = [];
         const renderingQuadtreeTiles: QuadtreeTile[] = [];
@@ -164,6 +168,7 @@ class EllipsoidComponent extends BaseComponent {
             return viewRect.Intersect(qTile.Boundary);
         };
 
+        let level = 0;
         const liter = (quadtreeTile: QuadtreeTile) => {
             const distance = this.computeTileDistanceToCamera(quadtreeTile, camera);
             const positionCartographic = this.ellipsoid_.spaceToGeographic(camera.Position);
@@ -185,10 +190,12 @@ class EllipsoidComponent extends BaseComponent {
                 rawQuadtreeTiles.push(quadtreeTile);
             }
         };
+
         //calcute from root tile
         for (let i = 0, len = rootTiles.length; i < len; i++) {
             liter(rootTiles[i]);
         }
+
         //filter level of tile
         for (let i = 0, len = rawQuadtreeTiles.length; i < len; i++) {
             const quadtreeTile = rawQuadtreeTiles[i];
@@ -196,37 +203,30 @@ class EllipsoidComponent extends BaseComponent {
                 renderingQuadtreeTiles.push(quadtreeTile);
             }
         }
+
         this.level_ = level;
         this.visualRevealTiles_ = renderingQuadtreeTiles;
     }
 
     /**
-    * @description
-    * @param b 
-    */
+     * @description enable/disable component. need awiat.
+     * @param {boolean} b 
+     */
     public override async enable(b: boolean): Promise<void> {
         this.enabled_ = b;
     }
 
     /**
-     * @param {Camera} args[0], instance of camera. main camera component.
-     * @param {number} args[1], client width, canvas client width of pixel, without device ratio. e.g as '600'
-     * @param {number} args[2], client height, canvas client width of pixel, without device ratio. e.g as '600'
+     * @description
+     * @param {Camera} camera, instance of camera. main camera component.
+     * @param {number} cw, client width, canvas client width of pixel, without device ratio. e.g as '600'
+     * @param {number} ch, client height, canvas client width of pixel, without device ratio. e.g as '600'
      */
-    public override async update(...args: any[]): Promise<void> {
-        if (!args || (args && !(args[0] instanceof Camera))) {
-            console.warn(`[W][EllipsoidComponent] invalid main camera, skip update.`);
-        }
-
+    public async update(camera: Camera, cw: number, ch: number): Promise<void> {
         // geometricError and maximumCameraHeight init.
-        const camera: Camera = args[0] as Camera;
-        const cw: number = (args[1]) as number;
-        const ch: number = (args[2]) as number;
         if (this.geometricErrors_.length === 0 && this.maximumCameraHeights_.length === 0) {
             this.refreshQuadTree(camera.getSseDenominator(), ch);
         }
-
-        // 
         this.updateQuadtreeTileByDistanceError(camera, cw, ch);
     }
 }

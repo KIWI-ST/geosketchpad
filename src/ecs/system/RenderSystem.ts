@@ -1,12 +1,13 @@
 import { IndexedStorageSnippet, OrderedGraph, VertexSnippet, ViewPlaneSnippet, ViewProjectionSnippet } from "@pipegpu/graph";
+import { IndexedStorageBuffer, StorageBuffer, UniformBuffer, type BufferHandle } from "@pipegpu/core";
+import type { Camera } from "@pipegpu/camera";
 import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
-import { IndexedStorageBuffer, StorageBuffer, UniformBuffer, type BufferHandle } from "@pipegpu/core";
 
 /**
- * 
+ * @description
  */
-type RESOURCE = {
+type GraphResource = {
     'ViewProjectionBuffer'?: {
         snippet: ViewProjectionSnippet,
         viewProjectionBuffer: UniformBuffer,
@@ -27,8 +28,15 @@ type RESOURCE = {
 
 /**
  * @class RenderSystem
+ * - with render graph.
+ * - register render resource.
  */
 class RenderSystem extends BaseSystem {
+    /**
+     * 
+     */
+    private camera_?: Camera;
+
     /**
      * 
      */
@@ -37,7 +45,7 @@ class RenderSystem extends BaseSystem {
     /**
      * 
      */
-    private resource_: RESOURCE = {};
+    private graphResource_: GraphResource = {};
 
     /**
      * 
@@ -49,38 +57,42 @@ class RenderSystem extends BaseSystem {
     }
 
     /**
-     * 
+     * @description register camera.
      */
-    private initCamera() {
+    private registerCamera(camera: Camera) {
+        if (this.graphResource_.ViewProjectionBuffer) {
+            return;
+        }
+        this.camera_ = camera;
+        if (!this.camera_) {
+            return;
+        }
         const compiler = this.scene_._state_renderer_.cpl3d;
-        if (!this.resource_.ViewProjectionBuffer) {
-            const cameraSystem = this.scene_._state_system_.cameraSystem;
-            const viewProjectionSnippet = new ViewProjectionSnippet(compiler);
-            const handler: BufferHandle = () => {
-                const buffer = new ArrayBuffer(128);
-                const bufferViews = {
-                    projection: new Float32Array(buffer, 0, 16),
-                    view: new Float32Array(buffer, 64, 16),
-                };
-                bufferViews.projection.set(cameraSystem.ProjectionMatrix!);
-                bufferViews.view.set(cameraSystem.ViewMatrix!);
-                return {
-                    rewrite: true,
-                    detail: {
-                        offset: 0,
-                        byteLength: 32 * 4,
-                        rawData: buffer,
-                    }
-                }
+        const viewProjectionSnippet = new ViewProjectionSnippet(compiler);
+        const handler: BufferHandle = () => {
+            const buffer = new ArrayBuffer(128);
+            const bufferViews = {
+                projection: new Float32Array(buffer, 0, 16),
+                view: new Float32Array(buffer, 64, 16),
             };
-            const viewProjectionBuffer = compiler.createUniformBuffer({
-                totalByteLength: 32 * 4,
-                handler: handler
-            });
-            this.resource_.ViewProjectionBuffer = {
-                snippet: viewProjectionSnippet,
-                viewProjectionBuffer: viewProjectionBuffer,
+            bufferViews.projection.set(this.camera_!.ProjectionMatrix);
+            bufferViews.view.set(this.camera_!.ViewMatrix);
+            return {
+                rewrite: true,
+                detail: {
+                    offset: 0,
+                    byteLength: 32 * 4,
+                    rawData: buffer,
+                }
             }
+        };
+        const viewProjectionBuffer = compiler.createUniformBuffer({
+            totalByteLength: 32 * 4,
+            handler: handler
+        });
+        this.graphResource_.ViewProjectionBuffer = {
+            snippet: viewProjectionSnippet,
+            viewProjectionBuffer: viewProjectionBuffer,
         }
     }
 
@@ -102,14 +114,9 @@ class RenderSystem extends BaseSystem {
      * @description
      * @returns 
      */
-    public override async Update(): Promise<void> {
-        // main camera.
-        if (!this.scene_._state_system_.cameraSystem.hasMainCamera()) {
-            return;
-        }
-
+    public async update(camera: Camera, cw: number, ch: number): Promise<void> {
         // check render graph resource.
-        this.initCamera();
+        this.registerCamera(camera);
 
 
         // this.initVertex();

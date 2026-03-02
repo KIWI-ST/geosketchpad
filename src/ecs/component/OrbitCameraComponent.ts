@@ -108,7 +108,7 @@ class OrbitCameraComponent extends BaseComponent {
     /**
      * 
      */
-    public override async update(..._args: any[]): Promise<void> {
+    public async update(): Promise<void> {
         let changed: boolean = false;
         let step = this._state_.isPanning ? 1.0 : this._state_.smooth;
 

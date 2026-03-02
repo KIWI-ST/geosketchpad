@@ -1,9 +1,9 @@
-import { vec3, vec3d } from "wgpu-matrix";
+import { vec3d } from "wgpu-matrix";
 import { OrbitCameraComponent, Scene } from "./src";
 import { PerspectiveCamera } from "@pipegpu/camera";
-import { GeodeticCoordinate, PSEUDOMERCATOR, QuadtreeTileSchema, webMercatorTileSchema, WGS84 } from "@pipegpu/geography";
+import { GeodeticCoordinate, webMercatorTileSchema, WGS84 } from "@pipegpu/geography";
 import { EllipsoidComponent } from "./src/ecs/component/EllipsoidComponent";
-import { HDMFComponent } from "./src/ecs/component/HDMFComponent";
+import { HardwareDenseMeshFriendlyComponent } from "./src/ecs/component/HardwareDenseMeshFriendlyComponent";
 
 (async () => {
 
@@ -32,7 +32,7 @@ import { HDMFComponent } from "./src/ecs/component/HDMFComponent";
     {
         const cameraComponent: OrbitCameraComponent = new OrbitCameraComponent(camera);
         cameraComponent.IsMainCamera = true;
-        // cameraComponent.enable(true);
+        await cameraComponent.enable(true);
         scene.addComponent(cameraEntity.UUID, cameraComponent);
     }
 
@@ -44,8 +44,9 @@ import { HDMFComponent } from "./src/ecs/component/HDMFComponent";
         await earthComponent.enable(true);
         scene.addComponent(earthEntity.UUID, earthComponent);
     }
+
     {
-        const hardwareDenseMeshFriendlyComponent: HDMFComponent = new HDMFComponent(
+        const hardwareDenseMeshFriendlyComponent: HardwareDenseMeshFriendlyComponent = new HardwareDenseMeshFriendlyComponent(
             `http://127.0.0.1/service/DamagedHelmet/`,
             new GeodeticCoordinate(116.397128, 39.917527)
         );
@@ -53,24 +54,3 @@ import { HDMFComponent } from "./src/ecs/component/HDMFComponent";
         scene.addComponent(earthEntity.UUID, hardwareDenseMeshFriendlyComponent);
     }
 })();
-
-
-
-
-
-
-// const geometryLayer = new GeometryLayer();
-// map.add(geometryLayer);
-
-// const g0 = new Hemisphere(new GeodeticCoordinate(114, 30.5), 1000000);
-// geometryLayer.add(g0);
-
-
-
-// map.on('frameend', (performance) => {
-//     document.getElementById('frameLabel')!.textContent = `帧率:${(+performance).toFixed(2)}`;
-// });
-
-// // setTimeout(() => {
-// //     map.flyTo(new GeodeticCoordinate(114, 30.5), 10, 1000);
-// // }, 1000);

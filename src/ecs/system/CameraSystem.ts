@@ -29,19 +29,21 @@ class CameraSystem extends BaseSystem {
     /**
      * @description camera system update.
      */
-    public override async Update(): Promise<void> {
+    public async update(): Promise<void> {
         const cameraComponents = this.scene_.getComponents('OrbitCameraComponent');
         if (!cameraComponents) {
             return;
         }
         for (const [key, c] of cameraComponents) {
             try {
-                const cameraComponent = c as OrbitCameraComponent;
-                await cameraComponent.update();
-
+                if (!c.IsEnable) {
+                    continue;
+                }
+                const component = c as OrbitCameraComponent;
+                await component.update();
                 // check camera, only one camera could be set as 'mainCamera'.
-                if (cameraComponent.IsMainCamera) {
-                    this.mainCamera_ = cameraComponent.Camrea;
+                if (component.IsMainCamera) {
+                    this.mainCamera_ = component.Camrea;
                     this.mainCameraEntity_ = key;
                 }
             }

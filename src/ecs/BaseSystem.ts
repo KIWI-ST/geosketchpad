@@ -16,11 +16,6 @@ abstract class BaseSystem {
     constructor(scene: Scene) {
         this.scene_ = scene;
     }
-
-    /**
-     * @description
-     */
-    public abstract Update(): Promise<void>;
 }
 
 export {

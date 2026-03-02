@@ -1,10 +1,9 @@
 // scene module
 export * from './scene/Scene';
 export * from './scene/Scene.InputBindings';
-export * from './scene/Scene.Render';
-export * from './scene/Scene.System';
-export * from './scene/Scene.Worker';
 export * from './scene/Scene.Tick';
+export * from './scene/Scene.Worker';
+
 
 // ecs
 export * from './ecs/BaseComponent';
