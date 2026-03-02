@@ -1,4 +1,5 @@
 import type { UserConfig } from 'vite';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default {
     base: './',
@@ -12,5 +13,15 @@ export default {
                 main: './index.html'
             }
         }
-    }
+    },
+    plugins: [
+        viteStaticCopy({
+            targets: [
+                {
+                    src: 'plugin/ktx/**/*',    // 'example/plugin/libktx/**/*',
+                    dest: '.',
+                },
+            ]
+        })
+    ]
 } satisfies UserConfig;

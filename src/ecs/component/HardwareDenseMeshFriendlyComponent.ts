@@ -1,7 +1,8 @@
 import type { Mat4d, Vec2d, Vec4d } from "wgpu-matrix";
 import { GeodeticCoordinate, QuadtreeTile } from "@pipegpu/geography";
-import { fetchHDMF, fetchTileData as fetchTileData, fetchMetaData, parseHDMFv2, type InstanceItem, type KTXPackData, type MaterialItem, type MeshItem, type MetaData, fetchKTX2AsBc7RGBA, type ScalerItem } from "@pipegpu/spec";
+import { fetchHDMF, fetchTileData as fetchTileData, fetchMetaData, parseHDMFv2, type InstanceItem, type MaterialItem, type MeshItem, type MetaData, type ScalerItem } from "@pipegpu/spec";
 import { BaseComponent } from "../BaseComponent";
+import { fetchKTX2AsBc7RGBA, type KTXPackData } from "../../util/ktx";
 
 const ERROR_CODE = -1;
 
@@ -144,7 +145,7 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
             if (!key || (key && key.trim().length === 0)) {
                 return;
             }
-            const uri = `${this.rootDir}${this.metaData?.texture_dir}${key}.ktx2`;
+            const uri = `${this.rootDir}${this.metaData?.texture_dir}/${key}.ktx2`;
             fetchKTX2AsBc7RGBA(uri, key).then((pack) => {
                 if (pack) {
                     this.textureRuntimeMap.set(pack.key, pack);
