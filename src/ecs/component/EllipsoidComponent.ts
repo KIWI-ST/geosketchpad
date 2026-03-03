@@ -1,4 +1,4 @@
-import { GeodeticCoordinate, QuadtreeTile, webMercatorTileSchema, type Ellipsoid, type QuadtreeTileSchema } from "@pipegpu/geography";
+import { CartoPosition, QuadtreeTile, webMercatorTileSchema, type Ellipsoid, type QuadtreeTileSchema } from "@pipegpu/geography";
 import { Camera } from "@pipegpu/camera";
 import { vec3d, type Vec3d } from "wgpu-matrix";
 
@@ -94,7 +94,7 @@ class EllipsoidComponent extends BaseComponent {
         }
         const zeroLevelQuadtreeTiles = this.zeroLevelTiles_;
         const pickedZeroLevelQuadtreeTiles: QuadtreeTile[] = [];
-        const geodeticCoordinate = this.ellipsoid_.spaceToGeographic(position);
+        const geodeticCoordinate = this.ellipsoid_.wsPosition2cartoPosition(position);
         zeroLevelQuadtreeTiles?.forEach((quadtreeTile) => {
             quadtreeTile.Boundary.Contain(geodeticCoordinate) ? pickedZeroLevelQuadtreeTiles.push(quadtreeTile) : null;
         });
@@ -113,7 +113,7 @@ class EllipsoidComponent extends BaseComponent {
             maxGeometricError = this.geometricErrors_[level],
             sseDenominator = camera.getSseDenominator(),
             height = ch;
-        const positionCartographic = this.ellipsoid_.spaceToGeographic(camera.Position);
+        const positionCartographic = this.ellipsoid_.wsPosition2cartoPosition(camera.Position);
         const distance = positionCartographic.Altitude;
         return (maxGeometricError * height!) / (distance * sseDenominator!);
     }
@@ -132,13 +132,13 @@ class EllipsoidComponent extends BaseComponent {
     }
 
     private computeTileDistanceToCamera(quadtreeTile: QuadtreeTile, camera: Camera): number {
-        const tileGeoCoord = new GeodeticCoordinate(
+        const tileGeoCoord = new CartoPosition(
             quadtreeTile.SphereBoundary[0],
             quadtreeTile.SphereBoundary[1],
             quadtreeTile.SphereBoundary[2]
         );
         //quadtreeTile.Boundary.Center.Longitude
-        const boundary = this.ellipsoid_.geographicToSpace(tileGeoCoord);
+        const boundary = this.ellipsoid_.cartoPosition2wsPostion(tileGeoCoord);
         const a: number = camera.Position[0] - boundary[0];
         const b: number = camera.Position[1] - boundary[1];
         const c: number = camera.Position[2] - boundary[2];
@@ -171,7 +171,7 @@ class EllipsoidComponent extends BaseComponent {
         let level = 0;
         const liter = (quadtreeTile: QuadtreeTile) => {
             const distance = this.computeTileDistanceToCamera(quadtreeTile, camera);
-            const positionCartographic = this.ellipsoid_.spaceToGeographic(camera.Position);
+            const positionCartographic = this.ellipsoid_.wsPosition2cartoPosition(camera.Position);
             if (distance > positionCartographic.Altitude * 20.0) {
                 return;
             }

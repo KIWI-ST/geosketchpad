@@ -28,6 +28,7 @@ type GraphResource = {
 
 /**
  * @class RenderSystem
+ * @description
  * - with render graph.
  * - register render resource.
  */

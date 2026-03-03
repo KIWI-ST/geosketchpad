@@ -1,136 +1,336 @@
-import type { Mat4d, Vec2d, Vec4d } from "wgpu-matrix";
-import { GeodeticCoordinate, QuadtreeTile } from "@pipegpu/geography";
-import { fetchHDMF, fetchTileData as fetchTileData, fetchMetaData, parseHDMFv2, type InstanceItem, type MaterialItem, type MeshItem, type MetaData, type ScalerItem } from "@pipegpu/spec";
+import { CartoPosition, Ellipsoid, QuadtreeTile } from "@pipegpu/geography";
+import {
+    fetchHDMF,
+    fetchTileAsset,
+    fetchMetaData,
+    parseHDMFv2,
+    type InstanceAsset,
+    type MaterialAsset,
+    type MeshAsset,
+    type MetaData,
+    type ScalerAsset
+} from "@pipegpu/spec";
 import { BaseComponent } from "../BaseComponent";
-import { fetchKTX2AsBc7RGBA, type KTXPackData } from "../../util/ktx";
+import { fetchKTX2AsBc7RGBA, type KTXPackAsset as KTXPackAsset } from "../../util/ktx";
+import type { Mat4, Vec4, Vec4d } from "wgpu-matrix";
 
-const ERROR_CODE = -1;
-
-type DrawIndexedIndirect = {
-    index_count: number,
-    instance_count: number,
-    first_index: number,
-    vertex_offset: number,
-    first_instance: number,
-};
-
-type InstanceDesc = {
-    model: Mat4d,
-    mesh_id: number,
-};
-
+/**
+ * @description
+ */
 type LoadingStatus = 'done' | 'pending';
+
+/**
+ * @description
+ *  分配
+ * - 实例起始索引
+ * - 网格起始索引
+ * - 簇起始索引
+ * - 材质起始索引
+ * - 贴图起始索引
+ * - 索引起始索引
+ * - 顶点起始索引
+ */
+type HardwareDenseMeshFriendlyAllocated = {
+    /**
+     * @description
+     */
+    runtime_instance_desc_offset: number;
+
+    /**
+     * @description
+     */
+    runtime_mesh_desc_offset: number;
+
+    /**
+     * @description
+     */
+    runtime_meshlet_desc_offset: number;
+
+    /**
+     * @description
+     */
+    runtime_material_desc_offset: number;
+};
+
+/**
+ * @description
+ *  CPU-side instance descriptor
+ */
+type InstanceDesc = {
+    /**
+     * 
+     */
+    model: Mat4;
+
+    /**
+     * runtime mesh index
+     */
+    runtime_mesh_idx: number;
+};
+
+/**
+ * @description
+ */
+type MeshDesc = {
+    /**
+     * @description
+     *  mesh 的 bounding sphere
+     *  [center x, center y, center z, radius]
+     */
+    bounding_sphere: Vec4d;
+
+    /**
+     * @description
+     *  Mesh对应的meshlet簇总数
+     */
+    meshlet_count: number;
+
+    /**
+    * @description
+    * TODO:: 可取消？
+    *   运行时索引
+    */
+    runtime_idx: number;
+
+    /**
+     * @description
+     *  运行时mesh的顶点在全局顶点数组的偏移值，以顶点为单位
+     */
+    runtime_vertex_offset: number;
+
+    /**
+     * @description
+     *  运行时mesh的meshlet在全局meshlet数组的偏移值，以meshletDesc为单位
+     */
+    runtime_meshlet_offset: number;
+
+    /**
+     * @description
+     *  运行时材质索引
+     */
+    runtime_material_idx: number;
+};
+
+/**
+ * @description
+ *  簇信息
+ */
+type MeshletDesc = {
+    /**
+     * @description
+     *  细化外包球
+     */
+    refined_bounding_sphere: Vec4;
+
+    /**
+     * @description
+     *  自身外包球
+     */
+    self_bounding_sphere: Vec4;
+
+    /**
+     * @description
+     *  简化外包球
+     */
+    simplified_bounding_sphere: Vec4;
+
+    /**
+     * @description
+     *  细化误差
+     */
+    refined_error: number;
+
+    /**
+     * @description
+     *  自身误差
+     */
+    self_error: number;
+
+    /**
+     * @description
+     *  简化误差
+     */
+    simplified_error: number;
+
+    /**
+     * @description
+     *  索引长度
+     */
+    index_count: number;
+
+    /**
+     * @description
+     *  运行时簇索引
+     */
+    runtime_idx: number;
+
+    /**
+     * @description
+     *  运行时Mesh索引
+     */
+    runtime_mesh_idx: number;
+
+    /**
+     * @description
+     *  运行时索引在全局的偏移，以uint32_t为单位
+     */
+    runtime_index_offset: number;
+};
+
+/**
+ * @todo 待补全
+ * @description
+ */
+type MaterialDesc = {
+    /**
+     * @description
+     * 运行时材质索引
+     */
+    runtime_idx: number;
+};
 
 /**
  * @class MeshComponent
  * @description
+ * HDMF 数据结构中，真正需要被异步加载的资产只有两种：
+ * - 网格体包。其中网格体包存储了簇、顶点、索引、材质等信息；材质如果包含纹理信息，则以ID形式存储。
+ * - 纹理，以固定压缩方式（默认BC7）压缩后存放的二进制文件。
  */
 class HardwareDenseMeshFriendlyComponent extends BaseComponent {
     /**
      * 
      */
-    private metaData?: MetaData;
+    private metaData_?: MetaData;
+
+    /**
+     * @description
+     */
+    private positionCarto_: CartoPosition;
+
+    /**
+     * @description ellipsoid
+     */
+    private ellipsoid_: Ellipsoid;
 
     /**
      * 
      */
-    private loc: GeodeticCoordinate;
-
-    /**
-     * 服务端提供的有效tileset索引集
-     */
-    private serverTileset: Set<string> = new Set();
-
-    /**
-     * 场景运行时 TILE 集.
-     */
-    private runtimeTileset: Set<string> = new Set();
-
-    /**
-     * 记录运行时 isntance 的 ID.
-     */
-    private instanceDescRuntimeMap: Map<string, InstanceItem> = new Map();
-
-    /**
-     * 记录运行时mesh(hdmf)庶几乎.
-     */
-    private meshDescRuntimeMap: Map<string, MeshItem | undefined> = new Map();
-
-    /**
-     * 记录运行时加载的ktx2.0
-     */
-    private textureRuntimeMap: Map<string, KTXPackData> = new Map();
-
-    /**
-     * 
-     */
-    private rootDir: string;
+    private rootDir_: string;
 
     /**
      * 请求instance队列.
      */
-    private waitRequestInstanceQueue: InstanceItem[] = [];
+    private waitRequestInstanceQueue_: InstanceAsset[] = [];
 
     /**
      * 
      */
-    private loadingStatus: LoadingStatus = 'done';
+    private loadingStatus_: LoadingStatus = 'done';
+
+    /**
+     * 服务端提供的有效tileset索引集
+     */
+    private serverTileset_: Set<string> = new Set();
+
+    /**
+     * 
+     */
+    private globalAlloc_?: HardwareDenseMeshFriendlyAllocated;
+
+    /**
+     * 
+     */
+    private nativeAlloc_: HardwareDenseMeshFriendlyAllocated;
+
+    /**
+     * 场景运行时 TILE 集.
+     */
+    private rtTile_: Set<string> = new Set();
+
+    /**
+     * 
+     */
+    private rtMesh_: Set<string> = new Set();
+
+    /**
+     * 记录运行时 isntance 的 ID.
+     */
+    private instanceMap_: Map<string, InstanceAsset> = new Map();
+
+    /**
+     * 记录运行时mesh(hdmf)庶几乎.
+     */
+    private meshMap_: Map<string, MeshAsset> = new Map();
+
+    /**
+     * 记录运行时加载的ktx2.0
+     */
+    private textureMap_: Map<string, KTXPackAsset> = new Map();
+
+    /**
+     * 
+     */
+    public get InstanceMap(): Map<string, InstanceAsset> {
+        return this.instanceMap_;
+    }
+
+    /**
+     * @description
+     * mapping of mesh uuid - mesh data.
+     */
+    public get MeshMap(): Map<string, MeshAsset> {
+        return this.meshMap_;
+    }
+
+    /**
+     * @description 
+     *  mapping of texture uuid - ktx2.0 data pack.
+     */
+    public get TextureMap(): Map<string, KTXPackAsset> {
+        return this.textureMap_;
+    }
 
     /**
      * 
      */
     public get MetaData(): MetaData {
-        if (this.metaData) {
-            return this.metaData;
+        if (this.metaData_) {
+            return this.metaData_;
         }
         else {
-            throw new Error('[E][HardwareDenseMeshFriendlyComponent] invalid metadata. please init first first.')
-        }
-    }
-
-    public get VertexByteLength() {
-        if (this.metaData) {
-            return this.metaData.vertex_byte_length;
-        }
-        else {
-            throw new Error('[E][HardwareDenseMeshFriendlyComponent] invalid metadata. please init first first.')
-        }
-    }
-
-    public get IndicesByteLength() {
-        if (this.metaData) {
-            return this.metaData.indices_byte_length;
-        }
-        else {
-            throw new Error('[E][HardwareDenseMeshFriendlyComponent] invalid metadata. please init first first.')
-        }
-    }
-
-    public get MeshletIndicesByteLength() {
-        if (this.metaData) {
-            return this.metaData.meshlet_indices_byte_length;
-        }
-        else {
-            throw new Error('[E][HardwareDenseMeshFriendlyComponent] invalid metadata. please init first first.')
+            throw new Error(`[E][HardwareDenseMeshFriendlyComponent] invalid metadata. please 'await component.enable(true). before use.`);
         }
     }
 
     /**
-     * @description hdmf service.
+     * @description 
+     *  hdmf service.
      * @param {string} rootDir, the root dir of hdmf service. e.g http://127.0.0.1/service/DamagedHelmet/
      */
-    constructor(rootDir: string, loc: GeodeticCoordinate = new GeodeticCoordinate(0.0, 0.0)) {
+    constructor(rootDir: string, ellipsoid: Ellipsoid, positionCarto: CartoPosition = new CartoPosition(0.0, 0.0)) {
         super('HardwareDenseMeshFriendlyComponent');
-        this.rootDir = rootDir;
-        this.loc = loc;
+        this.rootDir_ = rootDir;
+        this.positionCarto_ = positionCarto;
+        this.ellipsoid_ = ellipsoid;
+        this.nativeAlloc_ = {
+            runtime_instance_desc_offset: 0,
+            runtime_mesh_desc_offset: 0,
+            runtime_meshlet_desc_offset: 0,
+            runtime_material_desc_offset: 0
+        };
     }
 
+    /**
+     * @description
+     *  enable/disable component.
+     * @param b 
+     */
     public override async enable(b: boolean): Promise<void> {
         this.enabled_ = b;
-        if (b && !this.metaData) {
-            this.metaData = this.metaData || await fetchMetaData(this.rootDir);
-            this.metaData.vaild_tiles.forEach(key => {
-                this.serverTileset.add(key);
+        if (b && !this.metaData_) {
+            this.metaData_ = this.metaData_ || await fetchMetaData(this.rootDir_);
+            this.metaData_.vaild_tiles.forEach(key => {
+                this.serverTileset_.add(key);
             });
         }
     }
@@ -139,16 +339,17 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
      * @description request ktx 
      * @param item 
      */
-    private loadTexture = async (item: MaterialItem): Promise<void> => {
-        const Load = async (scaler: ScalerItem): Promise<void> => {
+    private loadTexture = async (item: MaterialAsset): Promise<void> => {
+
+        const Load = async (scaler: ScalerAsset): Promise<void> => {
             const key = scaler.texture_uuid;
             if (!key || (key && key.trim().length === 0)) {
                 return;
             }
-            const uri = `${this.rootDir}${this.metaData?.texture_dir}/${key}.ktx2`;
+            const uri = `${this.rootDir_}${this.metaData_?.texture_dir}/${key}.ktx2`;
             fetchKTX2AsBc7RGBA(uri, key).then((pack) => {
                 if (pack) {
-                    this.textureRuntimeMap.set(pack.key, pack);
+                    this.textureMap_.set(pack.key, pack);
                 } else {
                     console.error(`[E][loadTexture] load texture error. requet uri: ${uri}`);
                 }
@@ -194,27 +395,27 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
      * - hdmf indices
      * - hdmf bounds with lod
      */
-    private loadInstance = async (instance: InstanceItem): Promise<void> => {
+    private loadInstance = async (instance: InstanceAsset): Promise<void> => {
         // 装配 mesh： 未添加的 mesh 在此装配成 meshDesc
         const mesh_uuid: string = instance.mesh_uuid;
-        if (!this.meshDescRuntimeMap.has(mesh_uuid)) {
-            // fill runtime mesh map with undefined.
-            this.meshDescRuntimeMap.set(mesh_uuid, undefined);
+        if (!this.meshMap_.has(mesh_uuid) && !this.rtMesh_.has(mesh_uuid)) {
+            this.rtMesh_.add(mesh_uuid);
             // 直接请求 .hdmf 并解析
             // TODO:: request in web workers.
-            const uri = `${this.rootDir}${this.metaData?.mesh_dir}/${instance.mesh_uuid}.hdmf`;
+            const uri = `${this.rootDir_}${this.metaData_?.mesh_dir}/${instance.mesh_uuid}.hdmf`;
             const u8arr = await fetchHDMF(uri);
             if (u8arr) {
                 const mesh_item = parseHDMFv2(u8arr);
-                if (this.meshDescRuntimeMap.has(mesh_item.uuid)) {
-                    this.meshDescRuntimeMap.set(mesh_item.uuid, mesh_item);
+                if (this.meshMap_.has(mesh_item.uuid)) {
+                    this.meshMap_.set(mesh_item.uuid, mesh_item);
                     // allow load texture async
                     await this.loadTexture(mesh_item.material);
                 } else {
                     console.warn(`[W][enqueue] parseHMDFv2 error, missing pre request.`)
                 }
             } else {
-                this.meshDescRuntimeMap.delete(instance.mesh_uuid);
+                this.rtMesh_.delete(mesh_uuid);
+                this.meshMap_.delete(instance.mesh_uuid);
             }
         }
 
@@ -265,21 +466,55 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
 
     /**
      * @description
+     * @param allocatedMap 
+     */
+    private tryAllocate = (allocatedMap: Map<string, HardwareDenseMeshFriendlyAllocated>): boolean => {
+        if (!allocatedMap.get(this.uuid_)) {
+            // stats allocated memory.
+            const hdmfAlloc: HardwareDenseMeshFriendlyAllocated = {
+                runtime_instance_desc_offset: 0,
+                runtime_mesh_desc_offset: 0,
+                runtime_meshlet_desc_offset: 0,
+                runtime_material_desc_offset: 0
+            };
+            // TODO:: k must in ordered.
+            for (const [_k, v] of allocatedMap) {
+                hdmfAlloc.runtime_instance_desc_offset += v.runtime_instance_desc_offset;
+                hdmfAlloc.runtime_material_desc_offset += v.runtime_material_desc_offset;
+                hdmfAlloc.runtime_mesh_desc_offset += v.runtime_mesh_desc_offset;
+                hdmfAlloc.runtime_meshlet_desc_offset += v.runtime_meshlet_desc_offset;
+            }
+            this.globalAlloc_ = hdmfAlloc;
+            allocatedMap.set(this.uuid_, hdmfAlloc);
+            return true;
+        }
+        return true;
+    }
+
+    /**
+     * @description
      *  - tile
      *  - request meta data.
      *  - for service.
      * @param _args 
+     * @param {Map<string, HardwareDenseMeshFriendlyAllocated>} allocatedMap mapping of component uuid and Allocated. 
      */
-    public async update(visualRevealTiles: QuadtreeTile[], LIMIT: number): Promise<number> {
+    public async update(visualRevealTiles: QuadtreeTile[], LIMIT: number, allocatedMap: Map<string, HardwareDenseMeshFriendlyAllocated>): Promise<number> {
+        // try allocate memory.
+        // return while failed.
+        if (!this.tryAllocate(allocatedMap)) {
+            console.warn(`[W][update] try allocate memory failed, component update skipped.`);
+            return LIMIT;
+        }
         // do enqueue, cost compute limit.
-        let item = this.waitRequestInstanceQueue.shift();
+        let item = this.waitRequestInstanceQueue_.shift();
         while (LIMIT > 0 && item) {
             await this.loadInstance(item!);
             LIMIT--;
-            item = this.waitRequestInstanceQueue.shift();
+            item = this.waitRequestInstanceQueue_.shift();
         }
         // instance 未处理完，取消处理等待下次调用
-        if (this.waitRequestInstanceQueue.length > 0 || this.loadingStatus !== 'done' || !visualRevealTiles || visualRevealTiles.length === 0) {
+        if (this.waitRequestInstanceQueue_.length > 0 || this.loadingStatus_ !== 'done' || !visualRevealTiles || visualRevealTiles.length === 0) {
             return LIMIT;
         }
         // 预处理，过滤已加载/无需加载/服务端不存在的瓦片，避免重复请求
@@ -288,18 +523,18 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
                 return false;
             }
             const tileKey = `${tile?.X}_${tile?.Y}_${tile?.Level}.json`;
-            return !this.runtimeTileset.has(tileKey) && this.serverTileset.has(tileKey);
+            return !this.rtTile_.has(tileKey) && this.serverTileset_.has(tileKey);
         });
         // 无需处理
         if (validTiles.length === 0) {
             return LIMIT;
         }
         // TODO:: 优化性能，无需加载的json可终止请求
-        this.loadingStatus = 'pending';
+        this.loadingStatus_ = 'pending';
         for (const tile of validTiles) {
             const tileKey = `${tile?.X}_${tile?.Y}_${tile?.Level}.json`;
-            const tileUri = `${this.rootDir}${this.metaData?.lod_dir}/${tileKey}`;
-            const tileData = await fetchTileData(tileUri, tileKey);
+            const tileUri = `${this.rootDir_}${this.metaData_?.lod_dir}/${tileKey}`;
+            const tileData = await fetchTileAsset(tileUri, tileKey);
             // 如果没有返回数据，直接跳过不阻塞
             if (!tileData) {
                 console.warn(`[W][HardwareDenseMeshFriendlyComponent] missing tile data. key ${tileKey}`);
@@ -307,18 +542,19 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
             }
             // request tiles by visual reveal tile queue.
             for (const instance of tileData!.instances) {
-                if (!this.instanceDescRuntimeMap.has(instance.uuid)) {
-                    this.waitRequestInstanceQueue.push(instance);
+                if (!this.instanceMap_.has(instance.uuid)) {
+                    this.waitRequestInstanceQueue_.push(instance);
                 }
             }
-            this.runtimeTileset.add(tileKey);
+            this.rtTile_.add(tileKey);
         }
-        this.loadingStatus = 'done';
+        this.loadingStatus_ = 'done';
         // remain compute limit.
         return LIMIT;
     }
 }
 
 export {
+    type HardwareDenseMeshFriendlyAllocated,
     HardwareDenseMeshFriendlyComponent
 }

@@ -1,20 +1,120 @@
 import type { QuadtreeTile } from "@pipegpu/geography";
+import type { MetaData } from "@pipegpu/spec";
 import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
-import type { HardwareDenseMeshFriendlyComponent } from "../component/HardwareDenseMeshFriendlyComponent";
-
-// const MEM_ERR_CODE: number = -1;
+import type { HardwareDenseMeshFriendlyAllocated, HardwareDenseMeshFriendlyComponent } from "../component/HardwareDenseMeshFriendlyComponent";
 
 /**
- * @description 内存碎片
- * memory fragment
+ * @description
  */
-type MEM = {
-    entityUUID: string;
-    vertexByteLength: number;
-    indicesByteLength: number;
-    meshletIndicesByteLength: number;
-};
+// const _MEMORY_BLOCK_ERR_OFFSET_ = -1;
+
+
+
+// /**
+//  * @description
+//  */
+// type Block = {
+//     /**
+//      * @description
+//      *  实例内存块
+//      */
+//     instanceDescBlock: EntityOffset;
+
+//     /**
+//      * @description
+//      *  网格体内存块
+//      */
+//     meshDescBlock: EntityOffset;
+
+//     /**
+//      * @description
+//      *  材质内存块
+//      */
+//     materialDescBlock: EntityOffset;
+
+//     /**
+//      * @description
+//      *  顶点内存块
+//      */
+//     vertexBlock: EntityOffset;
+
+//     /**
+//      * @description
+//      *  簇内存块
+//      */
+//     meshletDescBlock: EntityOffset;
+
+//     /**
+//      * @description
+//      *  索引内存块
+//      */
+//     meshletIndicesBlock: EntityOffset;
+
+//     /**
+//      * @description
+//      * 未分簇索引内存块
+//      */
+//     indicesBlock: EntityOffset;
+
+//     /**
+//      * @description
+//      * 纹理内存块
+//      */
+//     textureBlock: EntityOffset;
+// };
+
+// /**
+//  * @description 
+//  *  single HDMF memory block.
+//  * @param metaData 
+//  * @returns 
+//  */
+// const createBlock = (metaData: MetaData) => {
+//     const b: Block = {
+//         instanceDescBlock: {
+//             size: metaData.instance_count * 1,
+//             isFree: false,
+//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
+//         },
+//         meshDescBlock: {
+//             size: metaData.mesh_count * 1,
+//             isFree: false,
+//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
+//         },
+//         materialDescBlock: {
+//             size: metaData.material_count * 1,
+//             isFree: false,
+//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
+//         },
+//         vertexBlock: {
+//             size: metaData.vertex_count * 1,
+//             isFree: false,
+//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
+//         },
+//         meshletDescBlock: {
+//             size: metaData.meshlet_count * 1,
+//             isFree: false,
+//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
+//         },
+//         meshletIndicesBlock: {
+//             size: metaData.meshlet_indices_count * 1,
+//             isFree: false,
+//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
+//         },
+//         indicesBlock: {
+//             size: metaData.indices_count * 1,
+//             isFree: false,
+//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
+//         },
+//         textureBlock: {
+//             size: metaData.texture_count * 1,
+//             isFree: false,
+//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
+//         }
+//     };
+//     return b;
+// }
 
 /**
  * @description MeshSystem
@@ -31,21 +131,33 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
     /**
      * @description
      */
-    private memMap_: Map<string, MEM> = new Map();
+    private allocatedMap_: Map<string, HardwareDenseMeshFriendlyAllocated> = new Map();
 
     /**
-     * 
+     * @description
      */
-    public get MemMap(): Map<string, MEM> {
-        return this.memMap_;
+    public get AllocatedMap(): Map<string, HardwareDenseMeshFriendlyAllocated> {
+        return this.allocatedMap_;
     }
 
     /**
-     * 
      * @param scene 
      */
     constructor(scene: Scene) {
         super(scene);
+    }
+
+    /**
+     * @description
+     *  refresh 
+     *  - block update.
+     * - 每帧读取所有component数据
+     * - 按照entityID分配连续内存区域
+     * - 标记更新内容
+     * - 注意，typescript Map 对象保留插入顺序，c++ undorder map 不保留；
+     */
+    private refresh = () => {
+
     }
 
     /**
@@ -69,17 +181,7 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
                 const component = c as HardwareDenseMeshFriendlyComponent;
                 const visualRevealTiles = visualRevealTilesMap?.get(key);
                 if (visualRevealTiles) {
-                    quotaCount = await component.update(visualRevealTiles, quotaCount);
-                    if (!this.memMap_.has(key)) {
-                        const mem: MEM = {
-                            entityUUID: key,
-                            vertexByteLength: component.MetaData.vertex_byte_length,
-                            indicesByteLength: component.MetaData.indices_byte_length,
-                            meshletIndicesByteLength: component.MetaData.meshlet_indices_byte_length,
-                        };
-                        // override mem meta data.
-                        this.memMap_.set(key, mem);
-                    }
+                    quotaCount = await component.update(visualRevealTiles, quotaCount, this.allocatedMap_);
                     // computing power exhausted, cancel.
                     if (quotaCount <= 0) {
                         return;
@@ -92,6 +194,8 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
                 console.error(`[E][MeshSystem][Update] type 'HardwareDenseMeshFriendlyComponent' update failed, key: ${key}.`);
             }
         }
+        //
+        this.refresh();
     }
 }
 

@@ -113,6 +113,8 @@ Scene.prototype.systemUpdate = async function (_timeStamp: number): Promise<void
     const hdmfSys = this._state_system_.hdmfSystem;
     await hdmfSys.update(ellipsoidSys.VisualRevealTilesMap);
 
+
+
 }
 
 /**

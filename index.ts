@@ -1,7 +1,7 @@
 import { vec3d } from "wgpu-matrix";
 import { OrbitCameraComponent, Scene } from "./src";
 import { PerspectiveCamera } from "@pipegpu/camera";
-import { GeodeticCoordinate, webMercatorTileSchema, WGS84 } from "@pipegpu/geography";
+import { CartoPosition, webMercatorTileSchema, WGS84 } from "@pipegpu/geography";
 import { EllipsoidComponent } from "./src/ecs/component/EllipsoidComponent";
 import { HardwareDenseMeshFriendlyComponent } from "./src/ecs/component/HardwareDenseMeshFriendlyComponent";
 
@@ -33,24 +33,21 @@ import { HardwareDenseMeshFriendlyComponent } from "./src/ecs/component/Hardware
         const cameraComponent: OrbitCameraComponent = new OrbitCameraComponent(camera);
         cameraComponent.IsMainCamera = true;
         await cameraComponent.enable(true);
-        scene.addComponent(cameraEntity.UUID, cameraComponent);
+        scene.setComponent(cameraEntity, cameraComponent);
     }
 
     // earth entity
     // earth entity with geoschema indexed source.
     const earthEntity = scene.createEntity();
     {
+        // earth component.
         const earthComponent: EllipsoidComponent = new EllipsoidComponent(WGS84, webMercatorTileSchema);
         await earthComponent.enable(true);
-        scene.addComponent(earthEntity.UUID, earthComponent);
-    }
+        scene.setComponent(earthEntity, earthComponent);
 
-    {
-        const hardwareDenseMeshFriendlyComponent: HardwareDenseMeshFriendlyComponent = new HardwareDenseMeshFriendlyComponent(
-            `http://127.0.0.1/service/DamagedHelmet/`,
-            new GeodeticCoordinate(116.397128, 39.917527)
-        );
-        await hardwareDenseMeshFriendlyComponent.enable(true);
-        scene.addComponent(earthEntity.UUID, hardwareDenseMeshFriendlyComponent);
+        // hdmf component.
+        const hdmfComponent: HardwareDenseMeshFriendlyComponent = new HardwareDenseMeshFriendlyComponent(`http://127.0.0.1/service/DamagedHelmet/`, WGS84, new CartoPosition(116.397128, 39.917527));
+        await hdmfComponent.enable(true);
+        scene.setComponent(earthEntity, hdmfComponent);
     }
 })();

@@ -189,14 +189,25 @@ class Scene {
      * @param {string} uuid uuid of entity 
      * @param {T} c, instance of component 
      */
-    public addComponent<T extends BaseComponent>(uuid: string, c: T): void {
-        if (!this.entities_.some(existEntity => existEntity.UUID === uuid)) {
+    public setComponent<T extends BaseComponent>(entity: BaseEntity, c: T): void {
+        // check if exists entity.
+        if (!this.entities_.some(existEntity => existEntity.UUID === entity.UUID)) {
             throw new Error(`[E][Scene][addComponent] invalid instance.`);
         }
-        if (!this.componentMap_.has(c.TYPE)) {
-            this.componentMap_.set(c.TYPE, new Map());
+        // mapping of entity UUID - BaseComponent.
+        const t: ComponentTYPE = c.TYPE;
+        const map = this.componentMap_.get(t);
+        const uuid = c.UUID;
+        // remove pre entity bind.
+        if (map && uuid && map.has(uuid)) {
+            map.delete(uuid);
         }
-        this.componentMap_.get(c.TYPE)!.set(uuid, c);
+        // component map.
+        if (!map || (map && !map.has(t))) {
+            this.componentMap_.set(t, new Map());
+        }
+        // bind entity with component.
+        this.componentMap_.get(t)?.set(entity.UUID, c);
     }
 
     /**

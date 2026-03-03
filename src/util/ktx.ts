@@ -8,7 +8,7 @@ type CompressTextureTYPE = 'BC7_RGBA';
 /**
  * ktx pack data.
  */
-interface KTXPackData {
+interface KTXPackAsset {
     /**
      * 
      */
@@ -55,7 +55,7 @@ interface KTXPackData {
  * @returns Promise<KTX2Container>
  *
  */
-const fetchKTX2AsBc7RGBA = async (uri: string, key: string = ""): Promise<KTXPackData | undefined> => {
+const fetchKTX2AsBc7RGBA = async (uri: string, key: string = ""): Promise<KTXPackAsset | undefined> => {
     try {
         const ktx = await LoadLIBKTX();
         const response = await fetch(uri);
@@ -85,7 +85,7 @@ const fetchKTX2AsBc7RGBA = async (uri: string, key: string = ""): Promise<KTXPac
 };
 
 export {
-    type CompressTextureTYPE as textureType,
-    type KTXPackData,
+    type CompressTextureTYPE,
+    type KTXPackAsset,
     fetchKTX2AsBc7RGBA
 }
