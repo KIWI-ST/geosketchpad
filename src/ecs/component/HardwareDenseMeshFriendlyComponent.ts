@@ -50,6 +50,21 @@ type HardwareDenseMeshFriendlyAllocated = {
      * @description
      */
     runtime_material_desc_offset: number;
+
+    /**
+     * @description
+     */
+    runtime_texture_offset: number;
+};
+
+const initHardwareDenseMeshFriendlyAllocated = () => {
+    return {
+        runtime_instance_desc_offset: 0,
+        runtime_mesh_desc_offset: 0,
+        runtime_meshlet_desc_offset: 0,
+        runtime_material_desc_offset: 0,
+        runtime_texture_offset: 0,
+    };
 };
 
 /**
@@ -248,9 +263,14 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
     private rtTile_: Set<string> = new Set();
 
     /**
-     * 
+     * @description
      */
     private rtMesh_: Set<string> = new Set();
+
+    /**
+     * @description
+     */
+    private rtTexture_: Set<string> = new Set();
 
     /**
      * 记录运行时 isntance 的 ID.
@@ -312,12 +332,7 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
         this.rootDir_ = rootDir;
         this.positionCarto_ = positionCarto;
         this.ellipsoid_ = ellipsoid;
-        this.nativeAlloc_ = {
-            runtime_instance_desc_offset: 0,
-            runtime_mesh_desc_offset: 0,
-            runtime_meshlet_desc_offset: 0,
-            runtime_material_desc_offset: 0
-        };
+        this.nativeAlloc_ = initHardwareDenseMeshFriendlyAllocated();
     }
 
     /**
@@ -340,22 +355,22 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
      * @param item 
      */
     private loadTexture = async (item: MaterialAsset): Promise<void> => {
-
         const Load = async (scaler: ScalerAsset): Promise<void> => {
             const key = scaler.texture_uuid;
-            if (!key || (key && key.trim().length === 0)) {
+            if (!key || (key && (key.trim().length === 0 || this.textureMap_.has(key) || this.rtTexture_.has(key)))) {
                 return;
             }
+            this.rtTexture_.add(key);
             const uri = `${this.rootDir_}${this.metaData_?.texture_dir}/${key}.ktx2`;
-            fetchKTX2AsBc7RGBA(uri, key).then((pack) => {
-                if (pack) {
-                    this.textureMap_.set(pack.key, pack);
-                } else {
-                    console.error(`[E][loadTexture] load texture error. requet uri: ${uri}`);
-                }
-            });
+            const ktxAsset = await fetchKTX2AsBc7RGBA(uri, key);
+            if (ktxAsset) {
+                this.textureMap_.set(ktxAsset.key, ktxAsset);
+            }
+            else {
+                console.error(`[E][loadTexture] load texture error. requet uri: ${uri}`);
+                this.rtTexture_.delete(key);
+            }
         };
-
         await Load(item.pbr.base_color);
         await Load(item.pbr.metallic);
         await Load(item.pbr.roughness);
@@ -368,14 +383,12 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
         await Load(item.pbr.anisotropy);
         await Load(item.pbr.transmission);
         await Load(item.pbr.volume_thickness);
-
         await Load(item.phong.diffuse);
         await Load(item.phong.specular);
         await Load(item.phong.shiness);
         await Load(item.phong.ambient);
         await Load(item.phong.emissive);
         await Load(item.phong.reflectivity);
-
         await Load(item.baked.ambient_occlusion);
         await Load(item.baked.light_map);
     }
@@ -469,24 +482,18 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
      * @param allocatedMap 
      */
     private tryAllocate = (allocatedMap: Map<string, HardwareDenseMeshFriendlyAllocated>): boolean => {
-        if (!allocatedMap.get(this.uuid_)) {
+        if (!allocatedMap.get(this.uuid_) && !this.globalAlloc_) {
             // stats allocated memory.
-            const hdmfAlloc: HardwareDenseMeshFriendlyAllocated = {
-                runtime_instance_desc_offset: 0,
-                runtime_mesh_desc_offset: 0,
-                runtime_meshlet_desc_offset: 0,
-                runtime_material_desc_offset: 0
-            };
+            this.globalAlloc_ = initHardwareDenseMeshFriendlyAllocated();
             // TODO:: k must in ordered.
             for (const [_k, v] of allocatedMap) {
-                hdmfAlloc.runtime_instance_desc_offset += v.runtime_instance_desc_offset;
-                hdmfAlloc.runtime_material_desc_offset += v.runtime_material_desc_offset;
-                hdmfAlloc.runtime_mesh_desc_offset += v.runtime_mesh_desc_offset;
-                hdmfAlloc.runtime_meshlet_desc_offset += v.runtime_meshlet_desc_offset;
+                this.globalAlloc_.runtime_instance_desc_offset += v.runtime_instance_desc_offset;
+                this.globalAlloc_.runtime_material_desc_offset += v.runtime_material_desc_offset;
+                this.globalAlloc_.runtime_mesh_desc_offset += v.runtime_mesh_desc_offset;
+                this.globalAlloc_.runtime_meshlet_desc_offset += v.runtime_meshlet_desc_offset;
+                this.globalAlloc_.runtime_texture_offset += v.runtime_texture_offset;
             }
-            this.globalAlloc_ = hdmfAlloc;
-            allocatedMap.set(this.uuid_, hdmfAlloc);
-            return true;
+            allocatedMap.set(this.uuid_, this.globalAlloc_);
         }
         return true;
     }

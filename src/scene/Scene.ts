@@ -161,27 +161,15 @@ class Scene {
     }
 
     /**
-     * @returns 
-     */
-    private getUUID() {
-        return `${this.entityIDX_++}`;
-    }
-
-    /**
      * @param EntityConstructor 
      * @returns 
      */
-    public createEntity<T extends BaseEntity>(EntityConstructor: new (uuid: string) => T = BaseEntity as unknown as new (uuid: string) => T): T {
-        const uuid: string = this.getUUID();
-        const entity = new EntityConstructor(uuid);
+    public createEntity<T extends BaseEntity>(EntityConstructor: new () => T = BaseEntity as unknown as new () => T): T {
+        const entity = new EntityConstructor();
         if (!(entity instanceof BaseEntity)) {
             throw new Error(`[E][createEntity] create entity error. constructor is not child of 'BaseEntity'.`);
         }
-        if (!this.entities_.some(existEntity => existEntity.UUID === uuid)) {
-            this.entities_.push(entity);
-        } else {
-            console.warn(`[W][createEntity] eneity uuid: ${uuid} already exists. duplicate addition is unnecessary.`);
-        }
+        this.entities_.push(entity);
         return entity;
     }
 

@@ -1,26 +1,24 @@
-import type { Scene } from "../scene/Scene";
-
 /**
+ * @description
  * @class BaseEntity
  */
 class BaseEntity {
     /**
      * 
      */
-    private uuid_: string;
+    private static IDX: number = 0;
 
     /**
-     * @description
+     * 
      */
-    private scene_: Scene;
+    private uuid_: string;
 
     /**
      * 
      * @param idx 
      */
-    constructor(uuid: string, scene: Scene) {
-        this.uuid_ = uuid;
-        this.scene_ = scene;
+    constructor() {
+        this.uuid_ = `_BaseEntity_${BaseEntity.IDX++}_`;
     }
 
     /**

@@ -45,7 +45,7 @@ abstract class BaseComponent {
      */
     constructor(componentTYPE: ComponentTYPE) {
         this.componentTYPE_ = componentTYPE;
-        this.uuid_ = `${this.componentTYPE_}${BaseComponent.IDX++}`;
+        this.uuid_ = `_${this.componentTYPE_}_${BaseComponent.IDX++}_`;
     }
 
     set EntityUUID(v: string) {
