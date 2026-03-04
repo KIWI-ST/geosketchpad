@@ -745,16 +745,15 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
         if (scaler.sampler_uuid && !this.samplerDataMap_.has(scaler.sampler_uuid)) {
             return -1;
         }
-        if (scaler.texture_uuid) {
-
-        } else {
-            return pack4xU8(0, 0, 0, 0);
-        }
         if (scaler.texture_uuid && scaler.sampler_uuid) {
             const rt_texture_idx = this.textureDataMap_.get(scaler.texture_uuid)!.rt_texture_idx;
             const [b, c] = unpack2xU8(rt_texture_idx);
             const d = this.samplerDataMap_.get(scaler.sampler_uuid)!.rt_sampler_idx;
             return pack4xU8(1, b, c, d);
+        } else if (scaler.texture_uuid) {
+            const rt_texture_idx = this.textureDataMap_.get(scaler.texture_uuid)!.rt_texture_idx;
+            const [b, c] = unpack2xU8(rt_texture_idx);
+            return pack4xU8(1, b, c, 0);
         } else {
             return pack4xU8(0, 0, 0, 0);
         }
