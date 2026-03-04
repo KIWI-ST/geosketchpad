@@ -2,7 +2,7 @@ import type { QuadtreeTile } from "@pipegpu/geography";
 import type { MetaData } from "@pipegpu/spec";
 import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
-import type { HardwareDenseMeshFriendlyAllocated, HardwareDenseMeshFriendlyComponent } from "../component/HardwareDenseMeshFriendlyComponent";
+import type { HardwareDenseMeshFriendlyCursor, HardwareDenseMeshFriendlyComponent } from "../component/HardwareDenseMeshFriendlyComponent";
 
 /**
  * @description
@@ -131,12 +131,12 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
     /**
      * @description
      */
-    private allocatedMap_: Map<string, HardwareDenseMeshFriendlyAllocated> = new Map();
+    private allocatedMap_: Map<string, HardwareDenseMeshFriendlyCursor> = new Map();
 
     /**
      * @description
      */
-    public get AllocatedMap(): Map<string, HardwareDenseMeshFriendlyAllocated> {
+    public get AllocatedMap(): Map<string, HardwareDenseMeshFriendlyCursor> {
         return this.allocatedMap_;
     }
 

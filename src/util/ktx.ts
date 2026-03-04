@@ -1,6 +1,12 @@
 import { LoadLIBKTX } from '../../plugin/ktx/libktx_wrapper';
 
 /**
+ * @description
+ *  before inited. the runtime index should be assigned with -1.
+ */
+const ERROR_CODE: number = -1;
+
+/**
  * ktx2.0 compress format, use BC7_RGBA for pc as default.
  */
 type CompressTextureTYPE = 'BC7_RGBA';
@@ -8,31 +14,41 @@ type CompressTextureTYPE = 'BC7_RGBA';
 /**
  * ktx pack data.
  */
-interface KTXPackAsset {
+type KTXPackData = {
     /**
      * 
      */
-    key: string,
+    needSync: boolean;
+
+    /**
+     * 
+     */
+    uuid: string;
 
     /**
      * @description raw data. streaming buffer.
      */
-    data: Uint8Array,
+    data: Uint8Array;
 
     /**
      * @description texture pixel width.
      */
-    width: number,
+    width: number;
 
     /**
      * @description texture pixel height.
      */
-    height: number,
+    height: number;
 
     /**
      * 
      */
-    t: CompressTextureTYPE,
+    t: CompressTextureTYPE;
+
+    /**
+     * @description
+     */
+    rt_texture_idx: number;
 }
 
 /**
@@ -55,7 +71,7 @@ interface KTXPackAsset {
  * @returns Promise<KTX2Container>
  *
  */
-const fetchKTX2AsBc7RGBA = async (uri: string, key: string = ""): Promise<KTXPackAsset | undefined> => {
+const fetchKTX2AsBc7RGBA = async (uri: string, key: string = ""): Promise<KTXPackData | undefined> => {
     try {
         const ktx = await LoadLIBKTX();
         const response = await fetch(uri);
@@ -69,11 +85,13 @@ const fetchKTX2AsBc7RGBA = async (uri: string, key: string = ""): Promise<KTXPac
             const bufferView = ktexture.getImage(0, 0, 0);
             const u8arr = new Uint8Array(bufferView);
             return {
-                key: key,
+                needSync: true,
+                uuid: key,
                 data: u8arr,
                 width: ktexture.baseWidth,
                 height: ktexture.baseHeight,
-                t: 'BC7_RGBA'
+                t: 'BC7_RGBA',
+                rt_texture_idx: ERROR_CODE,
             };
         } else {
             throw new Error(`[E][fetchKTX2AsBc7RGBA] ktx2 load failed, transcodeBasis error.`);
@@ -86,6 +104,6 @@ const fetchKTX2AsBc7RGBA = async (uri: string, key: string = ""): Promise<KTXPac
 
 export {
     type CompressTextureTYPE,
-    type KTXPackAsset,
+    type KTXPackData,
     fetchKTX2AsBc7RGBA
 }
