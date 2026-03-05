@@ -2,7 +2,8 @@ import type { QuadtreeTile } from "@pipegpu/geography";
 import type { MetaData } from "@pipegpu/spec";
 import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
-import type { HardwareDenseMeshFriendlyCursor, HardwareDenseMeshFriendlyComponent } from "../component/HardwareDenseMeshFriendlyComponent";
+import { HardwareDenseMeshFriendlyComponent, HardwareDenseMeshFriendlyCursor } from "../component/HardwareDenseMeshFriendlyComponent";
+import type { BaseComponent } from "../BaseComponent";
 
 /**
  * @description
@@ -130,6 +131,7 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
 
     /**
      * @description
+     *  mapping of HDMFComponent UUID and HMDFComponent Cursor.
      */
     private allocatedMap_: Map<string, HardwareDenseMeshFriendlyCursor> = new Map();
 
@@ -148,6 +150,16 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
     }
 
     /**
+     * 分配/更新 共享内存数据和运行时索引
+     */
+    private refreshSharedMemory = () => {
+        let samplerCursor = 0;
+        for (const [_k, v] of HardwareDenseMeshFriendlyComponent.SharedSamplerDataMap) {
+            v.rt_sampler_idx = samplerCursor++;
+        }
+    }
+
+    /**
      * @description
      *  refresh 
      *  - block update.
@@ -156,8 +168,43 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
      * - 标记更新内容
      * - 注意，typescript Map 对象保留插入顺序，c++ undorder map 不保留；
      */
-    private refresh = () => {
-
+    private tryAllocatedMemory = (componentMap: Map<string, BaseComponent>): boolean => {
+        // register hdmf uuid with cursor memory.
+        for (const [_entityUUID, v] of componentMap) {
+            const c = v as HardwareDenseMeshFriendlyComponent;
+            const metaData = c.MetaData;
+            if (!metaData) {
+                continue;
+            }
+            const initCur: HardwareDenseMeshFriendlyCursor = new HardwareDenseMeshFriendlyCursor();
+            {
+                initCur.InstanceDescCursor = metaData.instance_count;
+                initCur.MeshDescCursor = metaData.mesh_count;
+                initCur.VertexCursor = metaData.vertex_count;
+                initCur.IndicesCursor = metaData.indices_count;
+                initCur.MeshletDescCursor = metaData.meshlet_count;
+                initCur.MeshletIndicesCursor = metaData.meshlet_indices_count;
+                initCur.MaterialDescCursor = metaData.material_count;
+                initCur.TextureCursor = metaData.texture_count;
+            }
+            const componentUUID = c.UUID;
+            this.allocatedMap_.set(componentUUID, initCur);
+        }
+        // update alloacted map
+        // cursor for hdmf allocated.
+        const globalCur: HardwareDenseMeshFriendlyCursor = new HardwareDenseMeshFriendlyCursor();
+        for (const [_k, v] of this.allocatedMap_) {
+            // copy cursor.
+            const copyedCur = new HardwareDenseMeshFriendlyCursor();
+            copyedCur.copy(v);
+            // copy global cur to v.
+            v.copy(globalCur);
+            // update global cur with copyed offset.
+            globalCur.plus(copyedCur);
+        }
+        // update shared memory, static cached in HDMFComponent.
+        this.refreshSharedMemory();
+        return true;
     }
 
     /**
@@ -167,13 +214,18 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
      */
     public async update(visualRevealTilesMap: Map<string, QuadtreeTile[]>): Promise<void> {
         // hdmf components collection.
-        const hdmfComponents = this.scene_.getComponents('HardwareDenseMeshFriendlyComponent');
-        if (!hdmfComponents) {
+        const hdmfComponentMap = this.scene_.getComponents('HardwareDenseMeshFriendlyComponent');
+        if (!hdmfComponentMap) {
+            return;
+        }
+        // allocate memory.
+        if (!this.tryAllocatedMemory(hdmfComponentMap)) {
+            console.warn(`[E][HardwareDenseMeshFriendlySystem][update] tryAllocatedMemory failed. system update skipped.`);
             return;
         }
         // components share quotaCount per frame.
         let quotaCount = this.perFrameLimit_;
-        for (const [key, c] of hdmfComponents) {
+        for (const [key, c] of hdmfComponentMap) {
             try {
                 if (!c.IsEnable) {
                     continue;
@@ -194,8 +246,9 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
                 console.error(`[E][MeshSystem][Update] type 'HardwareDenseMeshFriendlyComponent' update failed, key: ${key}.`);
             }
         }
+
         //
-        this.refresh();
+
     }
 }
 

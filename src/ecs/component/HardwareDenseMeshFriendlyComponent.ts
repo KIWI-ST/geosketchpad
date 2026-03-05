@@ -1,4 +1,4 @@
-import type { Mat4, Vec3, Vec4, Vec4d } from "wgpu-matrix";
+import type { Mat4, Vec4 } from "wgpu-matrix";
 import { CartoPosition, Ellipsoid, QuadtreeTile } from "@pipegpu/geography";
 import {
     fetchHDMF,
@@ -19,74 +19,204 @@ import { pack4xU8, unpack2xU8 } from "../../util/pack";
 
 /**
  * @description
+ * @class HardwareDenseMeshFriendlyCursor
  */
-type LoadingStatus = 'done' | 'pending';
-
-/**
- * @description
- *  分配
- */
-type HardwareDenseMeshFriendlyCursor = {
+class HardwareDenseMeshFriendlyCursor {
     /**
-     * @description
-     */
-    instanceDescCursor: number;
+      * @description
+      */
+    private instanceDescCursor_: number = 0;
 
     /**
      * @description
      */
-    meshDescCursor: number;
+    private meshDescCursor_: number = 0;
 
     /**
-     * 
+     * @description
      */
-    vertexCursor: number;
+    private vertexCursor_: number = 0;
 
     /**
      * @description 
      *  fallback indices cursor in global position.
      */
-    indicesCursor: number;
+    private indicesCursor_: number = 0;
 
     /**
      * @description
      */
-    meshletDescCursor: number;
+    private meshletDescCursor_: number = 0;
 
     /**
      * @description
      */
-    meshletIndicesCursor: number;
+    private meshletIndicesCursor_: number = 0;
 
     /**
      * @description
      */
-    materialDescCursor: number;
+    private materialDescCursor_: number = 0;
 
     /**
      * @description
      */
-    textureCursor: number;
+    private textureCursor_: number = 0;
+
+    /**
+     * @description
+     */
+    public get InstanceDescCursor(): number {
+        return this.instanceDescCursor_;
+    }
+
+    /**
+     * @description
+     */
+    public set InstanceDescCursor(v: number) {
+        this.instanceDescCursor_ = v;
+    }
+
+    /**
+     * @description
+     */
+    public get MeshDescCursor(): number {
+        return this.meshDescCursor_;
+    }
+
+    /**
+     * @description
+     */
+    public set MeshDescCursor(v: number) {
+        this.meshDescCursor_ = v;
+    }
+
+    /**
+     * @description
+     */
+    public get VertexCursor(): number {
+        return this.vertexCursor_;
+    }
+
+    /**
+     * @description
+     */
+    public set VertexCursor(v: number) {
+        this.vertexCursor_ = v;
+    }
 
     /**
      * @description 
+     *  fallback indices cursor in global position.
      */
-    samplerCursor: number;
-};
+    public get IndicesCursor(): number {
+        return this.indicesCursor_;
+    }
 
-const initHardwareDenseMeshFriendlyCursor = (): HardwareDenseMeshFriendlyCursor => {
-    return {
-        instanceDescCursor: 0,
-        meshDescCursor: 0,
-        vertexCursor: 0,
-        indicesCursor: 0,
-        meshletDescCursor: 0,
-        meshletIndicesCursor: 0,
-        materialDescCursor: 0,
-        textureCursor: 0,
-        samplerCursor: 0,
-    };
-};
+    /**
+     * @description
+     */
+    public set IndicesCursor(v: number) {
+        this.indicesCursor_ = v;
+    }
+
+    /**
+     * @description
+     */
+    public get MeshletDescCursor(): number {
+        return this.meshletDescCursor_;
+    }
+
+    /**
+     * @description
+     */
+    public set MeshletDescCursor(v: number) {
+        this.meshletDescCursor_ = v;
+    }
+
+    /**
+     * @description
+     */
+    public get MeshletIndicesCursor(): number {
+        return this.meshletIndicesCursor_;
+    }
+
+    /**
+     * @description
+     */
+    public set MeshletIndicesCursor(v: number) {
+        this.meshletIndicesCursor_ = v;
+    }
+
+    /**
+     * @description
+     */
+    public get MaterialDescCursor(): number {
+        return this.materialDescCursor_;
+    }
+
+    /**
+     * @description
+     */
+    public set MaterialDescCursor(v: number) {
+        this.materialDescCursor_ = v;
+    }
+
+    /**
+     * @description
+     */
+    public get TextureCursor(): number {
+        return this.textureCursor_;
+    }
+
+    /**
+     * @description
+     */
+    public set TextureCursor(v: number) {
+        this.textureCursor_ = v;
+    }
+
+    /**
+     * @description
+     */
+    constructor() { }
+
+
+    /**
+     * @description update HardwareDenseMeshFriendlyCursor values.
+     * @param v 
+     */
+    copy = (v: HardwareDenseMeshFriendlyCursor) => {
+        this.instanceDescCursor_ = v.instanceDescCursor_;
+        this.meshDescCursor_ = v.meshDescCursor_;
+        this.vertexCursor_ = v.vertexCursor_;
+        this.indicesCursor_ = v.indicesCursor_;
+        this.meshletDescCursor_ = v.meshletDescCursor_;
+        this.meshletIndicesCursor_ = v.meshletIndicesCursor_;
+        this.materialDescCursor_ = v.materialDescCursor_;
+        this.textureCursor_ = v.textureCursor_;
+    }
+
+    /**
+     * @description
+     * @param v
+     */
+    plus = (v: HardwareDenseMeshFriendlyCursor) => {
+        this.instanceDescCursor_ += v.instanceDescCursor_;
+        this.meshDescCursor_ += v.meshDescCursor_;
+        this.vertexCursor_ += v.vertexCursor_;
+        this.indicesCursor_ += v.indicesCursor_;
+        this.meshletDescCursor_ += v.meshletDescCursor_;
+        this.meshletIndicesCursor_ += v.meshletIndicesCursor_;
+        this.materialDescCursor_ += v.materialDescCursor_;
+        this.textureCursor_ += v.textureCursor_;
+    }
+}
+
+/**
+ * @description
+ */
+type LoadingStatus = 'done' | 'pending';
 
 /**
  * @description
@@ -402,12 +532,6 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
 
     /**
      * @description
-     *  分配的全局索引
-     */
-    private cursor_?: HardwareDenseMeshFriendlyCursor;
-
-    /**
-     * @description
      *  记录实时请求的tile，防止重复请求。
      */
     private rtTile_: Set<string> = new Set();
@@ -559,20 +683,16 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
 
     /**
      * @description
+     * sampler 信息与其他信息不一样，sampler 属于可共享在所有
      */
-    private samplerDataMap_: Map<string, SamplerData> = new Map();
+    public static SharedSamplerDataMap: Map<string, SamplerData> = new Map();
 
     /**
      * @description
      *  hdmf meta data. 
      */
-    public get MetaData(): MetaData {
-        if (this.metaData_) {
-            return this.metaData_;
-        }
-        else {
-            throw new Error(`[E][HardwareDenseMeshFriendlyComponent] invalid metadata. please 'await component.enable(true). before use.`);
-        }
+    public get MetaData(): MetaData | undefined {
+        return this.metaData_;
     }
 
     /**
@@ -609,8 +729,8 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
     private loadSamplers = (samplers: SamplerData[]) => {
         samplers.forEach(sampler => {
             const uuid = sampler.uuid;
-            if (!this.samplerDataMap_.has(uuid)) {
-                this.samplerDataMap_.set(uuid, sampler);
+            if (!HardwareDenseMeshFriendlyComponent.SharedSamplerDataMap.has(uuid)) {
+                HardwareDenseMeshFriendlyComponent.SharedSamplerDataMap.set(uuid, sampler);
             } else {
                 console.warn(`[W][loadSamplers] sampler has added, uuid: ${uuid}`);
             }
@@ -716,27 +836,6 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
 
     /**
      * @description
-     * @param allocatedMap 
-     */
-    private tryAllocate = (allocatedMap: Map<string, HardwareDenseMeshFriendlyCursor>): boolean => {
-        if (!allocatedMap.get(this.uuid_) && !this.cursor_) {
-            // stats allocated memory.
-            this.cursor_ = initHardwareDenseMeshFriendlyCursor();
-            // TODO:: k must in ordered.
-            for (const [_k, v] of allocatedMap) {
-                this.cursor_.instanceDescCursor += v.instanceDescCursor;
-                this.cursor_.materialDescCursor += v.materialDescCursor;
-                this.cursor_.meshDescCursor += v.meshDescCursor;
-                this.cursor_.meshletDescCursor += v.meshletDescCursor;
-                this.cursor_.textureCursor += v.textureCursor;
-            }
-            allocatedMap.set(this.uuid_, this.cursor_);
-        }
-        return true;
-    }
-
-    /**
-     * @description
      * @param scaler 
      * @returns 
      */
@@ -744,13 +843,13 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
         if (scaler.texture_uuid && !this.textureDataMap_.has(scaler.texture_uuid)) {
             return -1;
         }
-        if (scaler.sampler_uuid && !this.samplerDataMap_.has(scaler.sampler_uuid)) {
+        if (scaler.sampler_uuid && !HardwareDenseMeshFriendlyComponent.SharedSamplerDataMap.has(scaler.sampler_uuid)) {
             return -1;
         }
         if (scaler.texture_uuid && scaler.sampler_uuid) {
             const rt_texture_idx = this.textureDataMap_.get(scaler.texture_uuid)!.rt_texture_idx;
             const [b, c] = unpack2xU8(rt_texture_idx);
-            const d = this.samplerDataMap_.get(scaler.sampler_uuid)!.rt_sampler_idx;
+            const d = HardwareDenseMeshFriendlyComponent.SharedSamplerDataMap.get(scaler.sampler_uuid)!.rt_sampler_idx;
             return pack4xU8(1, b, c, d);
         } else if (scaler.texture_uuid) {
             const rt_texture_idx = this.textureDataMap_.get(scaler.texture_uuid)!.rt_texture_idx;
@@ -825,46 +924,34 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
      * - 以mesh为单位组织vertex\indices\material\meshlet数据
      * - 另组织instance数据
      */
-    private refreshMemory = (): void => {
-        // 未成功分配内存，退出
-        if (!this.cursor_) {
-            console.warn(`[W][refreshMemory] invalid memory alloc of HDMF. please check soruce.`)
-            return;
-        }
+    private refreshMemory = (cursor: HardwareDenseMeshFriendlyCursor): void => {
         // 处理实例
         {
-            let instanceDescCursor = this.cursor_.instanceDescCursor;
+            let instanceDescCursor = cursor.InstanceDescCursor;
             for (const [_k, v] of this.instanceDataMap_) {
                 v.rt_instance_idx = instanceDescCursor++;
             }
         }
-        // 处理samplers
-        {
-            let samplerCursor = this.cursor_.samplerCursor;
-            for (const [_k, v] of this.samplerDataMap_) {
-                v.rt_sampler_idx = samplerCursor++;
-            }
-        }
         // 处理textures
         {
-            let textureCursor = this.cursor_.textureCursor;
+            let textureCursor = cursor.TextureCursor;
             for (const [_k, v] of this.textureDataMap_) {
                 v.rt_texture_idx = textureCursor++;
             }
         }
         // 处理materials
         {
-            let materialDescCursor = this.cursor_.materialDescCursor;
+            let materialDescCursor = cursor.MaterialDescCursor;
             for (const [_k, v] of this.materialDataMap_) {
                 v.rt_material_idx = materialDescCursor++;
             }
         }
         // 处理mesh
         {
-            let meshCursor = this.cursor_.meshDescCursor;
-            let vertexCursor = this.cursor_.instanceDescCursor;
-            let meshletCursor = this.cursor_.meshletDescCursor;
-            let meshletIndicesCursor = this.cursor_.meshletIndicesCursor;
+            let meshCursor = cursor.MeshDescCursor;
+            let vertexCursor = cursor.InstanceDescCursor;
+            let meshletCursor = cursor.MeshletDescCursor;
+            let meshletIndicesCursor = cursor.MeshletIndicesCursor;
             for (const [_key, v] of this.meshDataMap_) {
                 // assign mesh index.
                 v.rt_mesh_idx = meshCursor++;
@@ -902,7 +989,7 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
             }
 
             // sampler queue.
-            for (const [_k, v] of this.samplerDataMap_) {
+            for (const [_k, v] of HardwareDenseMeshFriendlyComponent.SharedSamplerDataMap) {
                 if (v.needSync) {
                     const q: SamplerDesc = {
                         blend: v.blend,
@@ -1019,10 +1106,11 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
     public async update(visualRevealTiles: QuadtreeTile[], LIMIT: number, allocatedMap: Map<string, HardwareDenseMeshFriendlyCursor>): Promise<number> {
         // try allocate memory.
         // return while failed.
-        if (!this.tryAllocate(allocatedMap)) {
-            console.warn(`[W][update] try allocate memory failed, component update skipped.`);
+        if (!allocatedMap.has(this.UUID)) {
+            console.warn(`[W][update] allocate memory failed, component update skipped.`);
             return LIMIT;
         }
+
         // do enqueue, cost compute limit.
         let item = this.waitRequestInstanceQueue_.shift();
         while (LIMIT > 0 && item) {
@@ -1030,10 +1118,12 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
             LIMIT--;
             item = this.waitRequestInstanceQueue_.shift();
         }
+
         // instance 未处理完，取消处理等待下次调用
         if (this.waitRequestInstanceQueue_.length > 0 || this.loadingStatus_ !== 'done' || !visualRevealTiles || visualRevealTiles.length === 0) {
             return LIMIT;
         }
+
         // 预处理，过滤已加载/无需加载/服务端不存在的瓦片，避免重复请求
         const validTiles = visualRevealTiles.filter(tile => {
             if (!tile) {
@@ -1042,10 +1132,12 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
             const tileKey = `${tile?.X}_${tile?.Y}_${tile?.Level}.json`;
             return !this.rtTile_.has(tileKey) && this.serverTileset_.has(tileKey);
         });
+
         // 无需处理
         if (validTiles.length === 0) {
             return LIMIT;
         }
+
         // TODO:: 优化性能，无需加载的json可终止请求
         this.loadingStatus_ = 'pending';
         for (const tile of validTiles) {
@@ -1067,13 +1159,14 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
             this.rtTile_.add(tileKey);
         }
         this.loadingStatus_ = 'done';
-        this.refreshMemory();
+
         // remain compute limit.
+        this.refreshMemory(allocatedMap.get(this.UUID)!);
         return LIMIT;
     }
 }
 
 export {
-    type HardwareDenseMeshFriendlyCursor,
-    HardwareDenseMeshFriendlyComponent
+    HardwareDenseMeshFriendlyCursor,
+    HardwareDenseMeshFriendlyComponent,
 }

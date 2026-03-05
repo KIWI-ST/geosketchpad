@@ -112,9 +112,6 @@ Scene.prototype.systemUpdate = async function (_timeStamp: number): Promise<void
     // hdmf update.
     const hdmfSys = this._state_system_.hdmfSystem;
     await hdmfSys.update(ellipsoidSys.VisualRevealTilesMap);
-
-
-
 }
 
 /**
@@ -148,25 +145,31 @@ Scene.registerHook(
         const compiler3d: Compiler = new Compiler(context3d);
 
         // init renderer state.
-        scene._state_renderer_ = {
-            lastTimeStamp: 0,
-            ctx3d: context3d,
-            cpl3d: compiler3d,
-        };
+        {
+            scene._state_renderer_ = {
+                lastTimeStamp: 0,
+                ctx3d: context3d,
+                cpl3d: compiler3d,
+            };
+        }
 
         // state system.
-        scene._state_system_ = {
-            cameraSystem: new CameraSystem(scene),
-            ellipsoidSystem: new EllipsoidSystem(scene),
-            hdmfSystem: new HardwareDenseMeshFriendlySystem(scene),
-            renderSystem: new RenderSystem(scene),
-        };
-        await scene._state_renderer_.ctx3d.init();
+        {
+            scene._state_system_ = {
+                cameraSystem: new CameraSystem(scene),
+                ellipsoidSystem: new EllipsoidSystem(scene),
+                hdmfSystem: new HardwareDenseMeshFriendlySystem(scene),
+                renderSystem: new RenderSystem(scene),
+            };
+            await scene._state_renderer_.ctx3d.init();
+        }
 
         // tick.
-        scene._state_tick_ = {
-            count: 0
-        };
-        await scene.tick(scene._state_tick_.count++);
+        {
+            scene._state_tick_ = {
+                count: 0
+            };
+            await scene.tick(scene._state_tick_.count++);
+        }
     }
 );
