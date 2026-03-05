@@ -23,56 +23,37 @@ import { pack4xU8, unpack2xU8 } from "../../util/pack";
  */
 class HDMFCursor {
     /**
-      * @description
-      */
-    private instanceDescCursor_: number = 0;
+     * @description
+     *  hdmf descriptor cursor.
+     */
+    private hdmfDescCursor_: number = 0;
+    public get HdmfDescCursor(): number {
+        return this.hdmfDescCursor_;
+    }
+    public set HdmfDescCursor(v) {
+        this.hdmfDescCursor_ = v;
+    }
+
 
     /**
      * @description
+     *  indirect draw cursor.
      */
-    private meshDescCursor_: number = 0;
-
-    /**
-     * @description
-     */
-    private vertexCursor_: number = 0;
-
-    /**
-     * @description 
-     *  fallback indices cursor in global position.
-     */
-    private indicesCursor_: number = 0;
-
-    /**
-     * @description
-     */
-    private meshletDescCursor_: number = 0;
-
-    /**
-     * @description
-     */
-    private meshletIndicesCursor_: number = 0;
-
-    /**
-     * @description
-     */
-    private materialDescCursor_: number = 0;
-
-    /**
-     * @description
-     */
-    private textureCursor_: number = 0;
-
-    /**
-     * @description
-     */
-    public get InstanceDescCursor(): number {
-        return this.instanceDescCursor_;
+    private indirectCursor_: number = 0;
+    public get IndirectCursor(): number {
+        return this.indirectCursor_;
+    }
+    public set IndirectCursor(v) {
+        this.indirectCursor_ = v;
     }
 
     /**
-     * @description
-     */
+      * @description
+      */
+    private instanceDescCursor_: number = 0;
+    public get InstanceDescCursor(): number {
+        return this.instanceDescCursor_;
+    }
     public set InstanceDescCursor(v: number) {
         this.instanceDescCursor_ = v;
     }
@@ -80,13 +61,10 @@ class HDMFCursor {
     /**
      * @description
      */
+    private meshDescCursor_: number = 0;
     public get MeshDescCursor(): number {
         return this.meshDescCursor_;
     }
-
-    /**
-     * @description
-     */
     public set MeshDescCursor(v: number) {
         this.meshDescCursor_ = v;
     }
@@ -94,13 +72,10 @@ class HDMFCursor {
     /**
      * @description
      */
+    private vertexCursor_: number = 0;
     public get VertexCursor(): number {
         return this.vertexCursor_;
     }
-
-    /**
-     * @description
-     */
     public set VertexCursor(v: number) {
         this.vertexCursor_ = v;
     }
@@ -109,13 +84,10 @@ class HDMFCursor {
      * @description 
      *  fallback indices cursor in global position.
      */
+    private indicesCursor_: number = 0;
     public get IndicesCursor(): number {
         return this.indicesCursor_;
     }
-
-    /**
-     * @description
-     */
     public set IndicesCursor(v: number) {
         this.indicesCursor_ = v;
     }
@@ -123,13 +95,10 @@ class HDMFCursor {
     /**
      * @description
      */
+    private meshletDescCursor_: number = 0;
     public get MeshletDescCursor(): number {
         return this.meshletDescCursor_;
     }
-
-    /**
-     * @description
-     */
     public set MeshletDescCursor(v: number) {
         this.meshletDescCursor_ = v;
     }
@@ -137,13 +106,10 @@ class HDMFCursor {
     /**
      * @description
      */
+    private meshletIndicesCursor_: number = 0;
     public get MeshletIndicesCursor(): number {
         return this.meshletIndicesCursor_;
     }
-
-    /**
-     * @description
-     */
     public set MeshletIndicesCursor(v: number) {
         this.meshletIndicesCursor_ = v;
     }
@@ -151,13 +117,10 @@ class HDMFCursor {
     /**
      * @description
      */
+    private materialDescCursor_: number = 0;
     public get MaterialDescCursor(): number {
         return this.materialDescCursor_;
     }
-
-    /**
-     * @description
-     */
     public set MaterialDescCursor(v: number) {
         this.materialDescCursor_ = v;
     }
@@ -165,13 +128,10 @@ class HDMFCursor {
     /**
      * @description
      */
+    private textureCursor_: number = 0;
     public get TextureCursor(): number {
         return this.textureCursor_;
     }
-
-    /**
-     * @description
-     */
     public set TextureCursor(v: number) {
         this.textureCursor_ = v;
     }
@@ -187,6 +147,8 @@ class HDMFCursor {
      * @param v 
      */
     copy = (v: HDMFCursor) => {
+        this.hdmfDescCursor_ = v.hdmfDescCursor_;
+        this.indirectCursor_ = v.indirectCursor_;
         this.instanceDescCursor_ = v.instanceDescCursor_;
         this.meshDescCursor_ = v.meshDescCursor_;
         this.vertexCursor_ = v.vertexCursor_;
@@ -202,6 +164,8 @@ class HDMFCursor {
      * @param v
      */
     plus = (v: HDMFCursor) => {
+        this.hdmfDescCursor_ += v.hdmfDescCursor_;
+        this.indirectCursor_ += v.indirectCursor_;
         this.instanceDescCursor_ += v.instanceDescCursor_;
         this.meshDescCursor_ += v.meshDescCursor_;
         this.vertexCursor_ += v.vertexCursor_;
@@ -217,6 +181,19 @@ class HDMFCursor {
  * @description
  */
 type LoadingStatus = 'done' | 'pending';
+
+/**
+ * @description
+ *  enable rte as default.
+ *  update scene desc need camera position.
+ *  scene 
+ */
+type SceneDesc = {
+    /**
+     * @description
+     */
+    model: Mat4;
+};
 
 /**
  * @description
@@ -496,6 +473,11 @@ type SamplerDesc = {
  */
 class HDMFComponent extends BaseComponent {
     /**
+    * 
+    */
+    private loadingStatus_: LoadingStatus = 'done';
+
+    /**
      * 
      */
     private metaData_?: MetaData;
@@ -519,11 +501,6 @@ class HDMFComponent extends BaseComponent {
      * 请求instance队列.
      */
     private waitRequestInstanceQueue_: InstanceData[] = [];
-
-    /**
-     * 
-     */
-    private loadingStatus_: LoadingStatus = 'done';
 
     /**
      * 服务端提供的有效tileset索引集

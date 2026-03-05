@@ -3,11 +3,13 @@ import { IndexedStorageBuffer, StorageBuffer, UniformBuffer, type BufferHandle }
 import type { Camera } from "@pipegpu/camera";
 import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
+import type { InstanceDesc } from "../component/HDMFComponent";
+import { mat4d, vec3d, vec4d, type Mat4d, type Vec3d, type Vec4d } from "wgpu-matrix";
 
 /**
  * @description
  */
-type GraphResource = {
+type RES = {
     'ViewProjectionBuffer'?: {
         snippet: ViewProjectionSnippet,
         viewProjectionBuffer: UniformBuffer,
@@ -24,7 +26,24 @@ type GraphResource = {
         snippet: IndexedStorageSnippet,
         indexedStorageBuffer: IndexedStorageBuffer,
     };
+    'MeshletIndicesStorageBuffer'?: {
+
+    }
 };
+
+/**
+ * @description
+ * @param viewMat 
+ * @returns 
+ */
+const getViewRTE = (viewMat: Mat4d): Mat4d => {
+    const rte = mat4d.clone(viewMat);
+    rte[12] = 0;
+    rte[13] = 0;
+    rte[14] = 0;
+    return rte;
+}
+
 
 /**
  * @class RenderSystem
@@ -47,7 +66,7 @@ class RenderSystem extends BaseSystem {
     /**
      * 
      */
-    private graphResource_: GraphResource = {};
+    private res_: RES = {};
 
     /**
      * 
@@ -61,12 +80,9 @@ class RenderSystem extends BaseSystem {
     /**
      * @description register camera.
      */
-    private registerCamera(camera: Camera) {
-        if (this.graphResource_.ViewProjectionBuffer) {
-            return;
-        }
+    private refreshViewProjectionBuffer(camera: Camera) {
         this.camera_ = camera;
-        if (!this.camera_) {
+        if (this.res_.ViewProjectionBuffer) {
             return;
         }
         const compiler = this.scene_._state_renderer_.cpl3d;
@@ -92,33 +108,155 @@ class RenderSystem extends BaseSystem {
             totalByteLength: 32 * 4,
             handler: handler
         });
-        this.graphResource_.ViewProjectionBuffer = {
+        this.res_.ViewProjectionBuffer = {
             snippet: viewProjectionSnippet,
             viewProjectionBuffer: viewProjectionBuffer,
         }
     }
 
     /**
+     * @description register view plane buffer with camera.
+     * @param camera 
+     * @returns 
+     */
+    private refreshViewPlaneBuffer = (camera: Camera) => {
+        this.camera_ = camera;
+        if (this.res_.ViewPlaneBuffer) {
+            return;
+        }
+        const compiler = this.scene_._state_renderer_.cpl3d;
+        const handler: BufferHandle = () => {
+            const viewRTE = getViewRTE(this.camera_!.ViewMatrix);
+            const m = mat4d.mul(this.camera_!.ProjectionMatrix, viewRTE);
+            let mat = m;
+            const planes: number[] = [];
+            // 组织plane六个面
+            const v3: Vec3d = vec3d.create();
+            // left
+            {
+                v3[0] = -(mat[3] + mat[0]);
+                v3[1] = -(mat[7] + mat[4]);
+                v3[2] = -(mat[11] + mat[8]);
+                const l: Vec4d = vec4d.create();
+                l.set([
+                    v3[0] / vec3d.len(v3),
+                    v3[1] / vec3d.len(v3),
+                    v3[2] / vec3d.len(v3),
+                    -(mat[15] + mat[12]) / vec3d.len(v3),
+                ]);
+                planes.push(...l);
+            }
+            // right
+            {
+                v3[0] = mat[0] - mat[3];
+                v3[1] = mat[4] - mat[7];
+                v3[2] = mat[8] - mat[11];
+                const r: Vec4d = vec4d.create();
+                r.set([
+                    v3[0] / vec3d.len(v3),
+                    v3[1] / vec3d.len(v3),
+                    v3[2] / vec3d.len(v3),
+                    (mat[12] - mat[15]) / vec3d.len(v3),
+                ]);
+                planes.push(...r);
+            }
+            // top
+            {
+                v3[0] = -(mat[3] + mat[1]);
+                v3[1] = -(mat[7] + mat[5]);
+                v3[2] = -(mat[11] + mat[9]);
+                const t: Vec4d = vec4d.create();
+                t.set([
+                    v3[0] / vec3d.len(v3),
+                    v3[1] / vec3d.len(v3),
+                    v3[2] / vec3d.len(v3),
+                    -(mat[15] + mat[13]) / vec3d.len(v3),
+                ]);
+                planes.push(...t);
+            }
+            // bottom
+            {
+                v3[0] = mat[1] - mat[3];
+                v3[1] = mat[5] - mat[7];
+                v3[2] = mat[9] - mat[11];
+                const b: Vec4d = vec4d.create();
+                b.set([
+                    v3[0] / vec3d.len(v3),
+                    v3[1] / vec3d.len(v3),
+                    v3[2] / vec3d.len(v3),
+                    (mat[13] - mat[15]) / vec3d.len(v3),
+                ]);
+                planes.push(...b);
+            }
+            // near
+            {
+                v3[0] = -(mat[2] + mat[3]);
+                v3[1] = -(mat[6] + mat[7]);
+                v3[2] = -(mat[10] + mat[11]);
+                const n: Vec4d = vec4d.create();
+                n.set([
+                    v3[0] / vec3d.len(v3),
+                    v3[1] / vec3d.len(v3),
+                    v3[2] / vec3d.len(v3),
+                    -(mat[14] + mat[15]) / vec3d.len(v3),
+                ]);
+                planes.push(...n);
+            }
+            // far
+            {
+                v3[0] = mat[2] - mat[3];
+                v3[1] = mat[6] - mat[7];
+                v3[2] = mat[10] - mat[11];
+                const f: Vec4d = vec4d.create();
+                f.set([
+                    v3[0] / vec3d.len(v3),
+                    v3[1] / vec3d.len(v3),
+                    v3[2] / vec3d.len(v3),
+                    (mat[14] - mat[15]) / vec3d.len(v3),
+                ]);
+                planes.push(...f);
+            }
+            const rawDataf32 = new Float32Array(planes);
+            return {
+                rewrite: true,
+                detail: {
+                    offset: 0,
+                    byteLength: 4 * 4 * 6,
+                    rawData: rawDataf32
+                }
+            }
+        };
+        const viewPlaneBuffer = compiler.createUniformBuffer({
+            totalByteLength: 4 * 4 * 6,
+            handler: handler,
+        });
+        this.res_.ViewPlaneBuffer = {
+            viewPlaneBuffer: viewPlaneBuffer,
+            snippet: new ViewPlaneSnippet(compiler),
+        };
+    }
+
+    /**
      * foreach mesh components, regroup mesh vertex data.
      */
-    private initVertex() {
-        // const compiler = this.scene_._state_renderer_.cpl3d;
-        // if (!this.resource_.VertexBuffer) {
-        //     const vertexSnippet = new VertexSnippet(compiler);
-        //     this.resource_.VertexBuffer = {
-        //         snippet: vertexSnippet,
-        //         vertexBuffer:
-        //     }
-        // }
+    private refreshInstanceDesc(instanceQueue: InstanceDesc[]) {
+
+
+
     }
 
     /**
      * @description
      * @returns 
      */
-    public async update(camera: Camera, cw: number, ch: number): Promise<void> {
-        // check render graph resource.
-        this.registerCamera(camera);
+    public async update(
+        camera: Camera,
+        cw: number,
+        ch: number,
+
+    ): Promise<void> {
+        this.refreshViewProjectionBuffer(camera);
+        this.refreshViewPlaneBuffer(camera);
 
 
         // this.initVertex();
