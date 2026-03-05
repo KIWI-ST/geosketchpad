@@ -85,6 +85,7 @@ class RenderSystem extends BaseSystem {
         if (this.res_.ViewProjectionBuffer) {
             return;
         }
+        const bLen = 32 * 4;
         const compiler = this.scene_._state_renderer_.cpl3d;
         const viewProjectionSnippet = new ViewProjectionSnippet(compiler);
         const handler: BufferHandle = () => {
@@ -93,21 +94,24 @@ class RenderSystem extends BaseSystem {
                 projection: new Float32Array(buffer, 0, 16),
                 view: new Float32Array(buffer, 64, 16),
             };
-            bufferViews.projection.set(this.camera_!.ProjectionMatrix);
-            bufferViews.view.set(this.camera_!.ViewMatrix);
+            // TODO:: float64 convert to float32 array.
+            const viewRTE = getViewRTE(this.camera_!.ViewMatrix);
+            bufferViews.view.set(new Float32Array(viewRTE));
+            bufferViews.projection.set(new Float32Array(this.camera_!.ProjectionMatrix));
             return {
                 rewrite: true,
                 detail: {
                     offset: 0,
-                    byteLength: 32 * 4,
+                    byteLength: bLen,
                     rawData: buffer,
                 }
             }
         };
         const viewProjectionBuffer = compiler.createUniformBuffer({
-            totalByteLength: 32 * 4,
+            totalByteLength: bLen,
             handler: handler
         });
+        // register to graph resoruce.
         this.res_.ViewProjectionBuffer = {
             snippet: viewProjectionSnippet,
             viewProjectionBuffer: viewProjectionBuffer,
