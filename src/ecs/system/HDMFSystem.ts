@@ -1,7 +1,7 @@
 import type { QuadtreeTile } from "@pipegpu/geography";
 import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
-import { HDMFComponent, HDMFCursor, type InstanceDesc, type MaterialDesc, type MeshDesc, type MeshletDesc, type SamplerDesc, type TextureDesc } from "../component/HDMFComponent";
+import { HDMFComponent, HDMFCursor, type InstanceDesc, type MaterialDesc, type MeshDesc, type MeshletDesc, type SamplerDesc, type SceneDesc, type TextureDesc } from "../component/HDMFComponent";
 import type { BaseComponent } from "../BaseComponent";
 
 /**
@@ -16,6 +16,11 @@ class HDMFSystem extends BaseSystem {
      * per frame task count.
      */
     private perFrameLimit_: number = 8;
+
+    private hdmfSceneDescQueue_: SceneDesc[] = [];
+    public get HdmfSceneDescQueue(): SceneDesc[] {
+        return this.hdmfSceneDescQueue_;
+    }
 
     private instanceDescQueue_: InstanceDesc[] = [];
     public get InstanceDescQueue(): InstanceDesc[] {
@@ -105,6 +110,7 @@ class HDMFSystem extends BaseSystem {
      */
     private tryAllocatedMemory = (componentMap: Map<string, BaseComponent>): boolean => {
         // register hdmf uuid with cursor memory.
+        let hdmfSceneCount = 0;
         for (const [_entityUUID, v] of componentMap) {
             const c = v as HDMFComponent;
             const metaData = c.MetaData;
@@ -113,6 +119,8 @@ class HDMFSystem extends BaseSystem {
             }
             const initCur: HDMFCursor = new HDMFCursor();
             {
+                initCur.HdmfSceneDescCursor = c.HDMFSceneData.rt_hdmf_idx = hdmfSceneCount++; // hdmf runtime index.
+                initCur.IndirectCursor = metaData.instance_spread_meshlet_count;
                 initCur.InstanceDescCursor = metaData.instance_count;
                 initCur.MeshDescCursor = metaData.mesh_count;
                 initCur.VertexCursor = metaData.vertex_count;
@@ -147,6 +155,7 @@ class HDMFSystem extends BaseSystem {
      * @param component 
      */
     private enqueue(component: HDMFComponent) {
+        this.hdmfSceneDescQueue_.push(...component.HDMFSceneDescQueue.splice(0));
         this.instanceDescQueue_.push(...component.InstanceDescQueue.splice(0));
         this.meshDescQueue_.push(...component.MeshDescQueue.splice(0));
         this.meshletDescQueue_.push(...component.meshletDescQueue.splice(0));

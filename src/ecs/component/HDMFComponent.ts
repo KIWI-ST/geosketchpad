@@ -1,4 +1,4 @@
-import type { Mat4, Vec4 } from "wgpu-matrix";
+import { mat4d, type Mat4, type Vec4 } from "wgpu-matrix";
 import { CartoPosition, Ellipsoid, QuadtreeTile } from "@pipegpu/geography";
 import {
     fetchHDMF,
@@ -27,10 +27,10 @@ class HDMFCursor {
      *  hdmf descriptor cursor.
      */
     private hdmfDescCursor_: number = 0;
-    public get HdmfDescCursor(): number {
+    public get HdmfSceneDescCursor(): number {
         return this.hdmfDescCursor_;
     }
-    public set HdmfDescCursor(v) {
+    public set HdmfSceneDescCursor(v) {
         this.hdmfDescCursor_ = v;
     }
 
@@ -188,12 +188,37 @@ type LoadingStatus = 'done' | 'pending';
  *  update scene desc need camera position.
  *  scene 
  */
+type SceneData = {
+    /**
+     * 
+     */
+    needSync: boolean;
+
+    /**
+     * @description
+     */
+    model: Mat4;
+
+    /**
+     * @description
+     */
+    rt_hdmf_idx: number;
+};
+
+/**
+ * @description
+ */
 type SceneDesc = {
     /**
      * @description
      */
     model: Mat4;
-};
+
+    /**
+     * @description
+     */
+    rt_hdmf_idx: number;
+}
 
 /**
  * @description
@@ -216,6 +241,11 @@ type InstanceDesc = {
      *  运行时Mesh的动态索引.
      */
     rt_mesh_idx: number;
+
+    /**
+     * @description
+     */
+    rt_scene_idx: number;
 };
 
 /**
@@ -526,109 +556,89 @@ class HDMFComponent extends BaseComponent {
     private rtTexture_: Set<string> = new Set();
 
     /**
-     * 
+     * @description
      */
-    private instanceDescQueue_: InstanceDesc[] = [];
-
-    /**
-     * 
-     */
-    private meshDescQueue_: MeshDesc[] = [];
-
-    /**
-     * 
-     */
-    private meshletDescQueue_: MeshletDesc[] = [];
-
-    /**
-     * 
-     */
-    private materialDescQueue_: MaterialDesc[] = [];
-
-    /**
-     * 
-     */
-    private textureQueue_: TextureDesc[] = [];
-
-    /**
-     * 
-     */
-    private vertexQueue_: Float32Array[] = [];
-
-    /**
-     * 
-     */
-    private meshletIndicesQueue_: Uint32Array[] = [];
-
-    /**
-     * 
-     */
-    private indicesQueue_: Uint32Array[] = [];
-
-    /**
-     * 
-     */
-    private samplerQueue_: SamplerDesc[] = [];
+    private sceneData_: SceneData;
+    public get HDMFSceneData(): SceneData {
+        return this.sceneData_;
+    }
 
     /**
      * @description
      */
+    private sceneDescQueue_: SceneDesc[] = [];
+    public get HDMFSceneDescQueue(): SceneDesc[] {
+        return this.sceneDescQueue_;
+    }
+
+    /**
+     * 
+     */
+    private instanceDescQueue_: InstanceDesc[] = [];
     public get InstanceDescQueue(): InstanceDesc[] {
         return this.instanceDescQueue_;
     }
 
     /**
-     * @description
+     * 
      */
+    private meshDescQueue_: MeshDesc[] = [];
     public get MeshDescQueue(): MeshDesc[] {
         return this.meshDescQueue_;
     }
 
     /**
-     * @description
+     * 
      */
+    private meshletDescQueue_: MeshletDesc[] = [];
     public get meshletDescQueue(): MeshletDesc[] {
         return this.meshletDescQueue_;
     }
 
     /**
-     * @description
+     * 
      */
+    private materialDescQueue_: MaterialDesc[] = [];
     public get MaterialDescQueue(): MaterialDesc[] {
         return this.materialDescQueue_;
     }
 
     /**
-     * @description
+     * 
      */
+    private textureQueue_: TextureDesc[] = [];
     public get TextureQueue(): TextureDesc[] {
         return this.textureQueue_;
     }
 
     /**
-     * @description
+     * 
      */
+    private vertexQueue_: Float32Array[] = [];
     public get VertexQueue(): Float32Array[] {
         return this.vertexQueue_;
     }
 
     /**
-     * @description
+     * 
      */
+    private meshletIndicesQueue_: Uint32Array[] = [];
     public get MeshletIndicesQueue(): Uint32Array[] {
         return this.meshletIndicesQueue_;
     }
 
     /**
-     * @description
+     * 
      */
+    private indicesQueue_: Uint32Array[] = [];
     public get IndicesQueue(): Uint32Array[] {
         return this.indicesQueue_;
     }
 
     /**
-     * @description
+     * 
      */
+    private samplerQueue_: SamplerDesc[] = [];
     public get SamplerQueue(): SamplerDesc[] {
         return this.samplerQueue_;
     }
@@ -682,6 +692,7 @@ class HDMFComponent extends BaseComponent {
         this.rootDir_ = rootDir;
         this.positionCarto_ = positionCarto;
         this.ellipsoid_ = ellipsoid;
+        this.sceneData_ = { needSync: true, model: mat4d.identity(), rt_hdmf_idx: ERROR_CODE };
     }
 
     /**
@@ -900,6 +911,16 @@ class HDMFComponent extends BaseComponent {
      * - instance
      */
     private enqueue = () => {
+        // scene data enqueue.
+        if (this.sceneData_.needSync) {
+            const q: SceneDesc = {
+                model: this.sceneData_.model,
+                rt_hdmf_idx: this.sceneData_.rt_hdmf_idx
+            };
+            this.sceneDescQueue_.push(q);
+            this.sceneData_.needSync = false;
+        }
+
         // instance desc enqueue.
         for (const [_k, v] of this.instanceDataMap_) {
             if (!v.needSync || !this.meshDataMap_.has(v.mesh_uuid)) {
@@ -910,6 +931,7 @@ class HDMFComponent extends BaseComponent {
                 model: v.model,
                 rt_instance_idx: v.rt_instance_idx,
                 rt_mesh_idx: rt_mesh_idx,
+                rt_scene_idx: this.sceneData_.rt_hdmf_idx,
             };
             this.instanceDescQueue_.push(q);
             v.needSync = false;
@@ -1124,6 +1146,7 @@ class HDMFComponent extends BaseComponent {
 }
 
 export {
+    type SceneDesc,
     type InstanceDesc,
     type MeshDesc,
     type MeshletDesc,

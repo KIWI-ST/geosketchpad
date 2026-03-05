@@ -250,23 +250,20 @@ class RenderSystem extends BaseSystem {
      * @returns 
      */
     public async update(
-        camera: Camera,
-        cw: number,
-        ch: number,
-
+        opts: {
+            camera: Camera,
+            cw: number,
+            ch: number,
+        }
     ): Promise<void> {
-        this.refreshViewProjectionBuffer(camera);
-        this.refreshViewPlaneBuffer(camera);
-
-
+        this.refreshViewProjectionBuffer(opts.camera);
+        this.refreshViewPlaneBuffer(opts.camera);
         // this.initVertex();
-
         // renderOpaque()
         // renderStataic
         // renderDynmaic
         // this.initIndices();
         // this.initMeshlet();
-
     }
 }
 
