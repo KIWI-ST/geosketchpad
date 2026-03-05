@@ -21,7 +21,7 @@ import { pack4xU8, unpack2xU8 } from "../../util/pack";
  * @description
  * @class HardwareDenseMeshFriendlyCursor
  */
-class HardwareDenseMeshFriendlyCursor {
+class HDMFCursor {
     /**
       * @description
       */
@@ -186,7 +186,7 @@ class HardwareDenseMeshFriendlyCursor {
      * @description update HardwareDenseMeshFriendlyCursor values.
      * @param v 
      */
-    copy = (v: HardwareDenseMeshFriendlyCursor) => {
+    copy = (v: HDMFCursor) => {
         this.instanceDescCursor_ = v.instanceDescCursor_;
         this.meshDescCursor_ = v.meshDescCursor_;
         this.vertexCursor_ = v.vertexCursor_;
@@ -201,7 +201,7 @@ class HardwareDenseMeshFriendlyCursor {
      * @description
      * @param v
      */
-    plus = (v: HardwareDenseMeshFriendlyCursor) => {
+    plus = (v: HDMFCursor) => {
         this.instanceDescCursor_ += v.instanceDescCursor_;
         this.meshDescCursor_ += v.meshDescCursor_;
         this.vertexCursor_ += v.vertexCursor_;
@@ -478,7 +478,7 @@ type SamplerDesc = {
 };
 
 /**
- * @class MeshComponent
+ * @class HDMFComponent
  * @description
  * HDMF 数据结构中，真正需要被异步加载的资产只有两种：
  * - 网格体包。其中网格体包存储了簇、顶点、索引、材质等信息；材质如果包含纹理信息，则以ID形式存储。
@@ -494,7 +494,7 @@ type SamplerDesc = {
  *  -- indicesQueue_ 
  *  -- samplerQueue_ 
  */
-class HardwareDenseMeshFriendlyComponent extends BaseComponent {
+class HDMFComponent extends BaseComponent {
     /**
      * 
      */
@@ -729,8 +729,8 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
     private loadSamplers = (samplers: SamplerData[]) => {
         samplers.forEach(sampler => {
             const uuid = sampler.uuid;
-            if (!HardwareDenseMeshFriendlyComponent.SharedSamplerDataMap.has(uuid)) {
-                HardwareDenseMeshFriendlyComponent.SharedSamplerDataMap.set(uuid, sampler);
+            if (!HDMFComponent.SharedSamplerDataMap.has(uuid)) {
+                HDMFComponent.SharedSamplerDataMap.set(uuid, sampler);
             } else {
                 console.warn(`[W][loadSamplers] sampler has added, uuid: ${uuid}`);
             }
@@ -843,13 +843,13 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
         if (scaler.texture_uuid && !this.textureDataMap_.has(scaler.texture_uuid)) {
             return -1;
         }
-        if (scaler.sampler_uuid && !HardwareDenseMeshFriendlyComponent.SharedSamplerDataMap.has(scaler.sampler_uuid)) {
+        if (scaler.sampler_uuid && !HDMFComponent.SharedSamplerDataMap.has(scaler.sampler_uuid)) {
             return -1;
         }
         if (scaler.texture_uuid && scaler.sampler_uuid) {
             const rt_texture_idx = this.textureDataMap_.get(scaler.texture_uuid)!.rt_texture_idx;
             const [b, c] = unpack2xU8(rt_texture_idx);
-            const d = HardwareDenseMeshFriendlyComponent.SharedSamplerDataMap.get(scaler.sampler_uuid)!.rt_sampler_idx;
+            const d = HDMFComponent.SharedSamplerDataMap.get(scaler.sampler_uuid)!.rt_sampler_idx;
             return pack4xU8(1, b, c, d);
         } else if (scaler.texture_uuid) {
             const rt_texture_idx = this.textureDataMap_.get(scaler.texture_uuid)!.rt_texture_idx;
@@ -911,12 +911,124 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
             q.baked_ambient_occlusion !== -1 &&
             q.baked_light_map !== -1
             ;
-
         if (valid) {
             return q;
         }
-
         return undefined;
+    }
+
+    /**
+     * @description
+     *  enqueue GPU-Friendly data.
+     * - instance
+     */
+    private enqueue = () => {
+        // instance desc enqueue.
+        for (const [_k, v] of this.instanceDataMap_) {
+            if (!v.needSync || !this.meshDataMap_.has(v.mesh_uuid)) {
+                continue;
+            }
+            const rt_mesh_idx = this.meshDataMap_.get(v.mesh_uuid)!.rt_mesh_idx;
+            const q: InstanceDesc = {
+                model: v.model,
+                rt_instance_idx: v.rt_instance_idx,
+                rt_mesh_idx: rt_mesh_idx,
+            };
+            this.instanceDescQueue_.push(q);
+            v.needSync = false;
+        }
+        // sampler desc enqueue.
+        for (const [_k, v] of HDMFComponent.SharedSamplerDataMap) {
+            if (!v.needSync) {
+                continue;
+            }
+            const q: SamplerDesc = {
+                blend: v.blend,
+                uvindex: v.uvindex,
+                mapping: v.mapping,
+                map_mode: v.map_mode,
+                op: v.op,
+                rt_sampler_idx: v.rt_sampler_idx
+            };
+            this.samplerQueue_.push(q);
+            v.needSync = false;
+        }
+        // texture enqueue
+        for (const [_k, v] of this.textureDataMap_) {
+            if (!v.needSync) {
+                continue;
+            }
+            const q: TextureDesc = {
+                width: v.width,
+                height: v.height,
+                t: v.t,
+                data: v.data,
+                rt_texture_idx: v.rt_texture_idx
+            };
+            this.textureQueue_.push(q);
+            v.needSync = false;
+        }
+        // material desc enqueue
+        for (const [_k, v] of this.materialDataMap_) {
+            // due to material deps texture, need check texture load status first.
+            if (v.needSync) {
+                const q = this.packMaterialData2Desc(v);
+                if (q) {
+                    this.materialDescQueue_.push(q);
+                    v.needSync = false;
+                } else {
+                    console.warn(`[W] materialData convert to queue failed. materialData uuid: ${v.uuid}.`);
+                }
+            }
+        }
+        // mesh-based enqueue
+        for (const [_k, v] of this.meshDataMap_) {
+            // dep material runtime idx.
+            if (!v.needSync) {
+                continue;
+            }
+            // TODO::
+            // all material set as opaque.
+            // has material, but material wait load.
+            const hasMaterial = v.material && v.material.uuid && v.material.uuid.trim().length > 0;
+            if (hasMaterial && !this.materialDataMap_.has(v.material.uuid)) {
+                continue;
+            }
+            const rt_material_idx: number = hasMaterial ? this.materialDataMap_.get(v.material.uuid)!.rt_material_idx : ERROR_CODE;
+            const q: MeshDesc = {
+                bounding_sphere: v.bounding_sphere,
+                meshlet_count: v.meshlet_count,
+                rt_mesh_idx: v.rt_mesh_idx,
+                rt_vertex_offset: v.rt_vertex_offset,
+                rt_meshlet_offset: v.rt_meshlet_offset,
+                rt_material_idx: rt_material_idx
+            };
+            this.meshDescQueue_.push(q);
+            // meshlet desc enqueue.
+            v.meshlets.forEach(meshlet => {
+                const q: MeshletDesc = {
+                    refined_bounding_sphere: meshlet.refined_bounding_sphere,
+                    self_bounding_sphere: meshlet.self_bounding_sphere,
+                    simplified_bounding_sphere: meshlet.simplified_bounding_sphere,
+                    refined_error: meshlet.refined_error,
+                    self_error: meshlet.self_error,
+                    simplified_error: meshlet.simplified_error,
+                    index_count: meshlet.index_count,
+                    rt_meshlet_idx: meshlet.rt_meshlet_idx,
+                    rt_mesh_idx: meshlet.rt_mesh_idx,               // check mesh uuid and runtime index.
+                    rt_index_offset: meshlet.rt_index_offset,
+                };
+                // meshlet desc enqueue.
+                this.meshletDescQueue_.push(q);
+                // meshlet indices enqueue.
+                this.meshletIndicesQueue_.push(meshlet.indices);
+            });
+            // vertex enqueue.
+            this.vertexQueue_.push(v.vertex);
+            // indices enqueue.
+            this.indicesQueue_.push(v.indices);
+            v.needSync = false;
+        }
     }
 
     /**
@@ -924,175 +1036,43 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
      * - 以mesh为单位组织vertex\indices\material\meshlet数据
      * - 另组织instance数据
      */
-    private refreshMemory = (cursor: HardwareDenseMeshFriendlyCursor): void => {
-        // 处理实例
-        {
-            let instanceDescCursor = cursor.InstanceDescCursor;
-            for (const [_k, v] of this.instanceDataMap_) {
-                v.rt_instance_idx = instanceDescCursor++;
-            }
+    private refreshMemory = (cursor: HDMFCursor): void => {
+        // instance runtime index.
+        let instanceDescCursor = cursor.InstanceDescCursor;
+        for (const [_k, v] of this.instanceDataMap_) {
+            v.rt_instance_idx = instanceDescCursor++;
         }
-        // 处理textures
-        {
-            let textureCursor = cursor.TextureCursor;
-            for (const [_k, v] of this.textureDataMap_) {
-                v.rt_texture_idx = textureCursor++;
-            }
+        // texture runtime index.
+        let textureCursor = cursor.TextureCursor;
+        for (const [_k, v] of this.textureDataMap_) {
+            v.rt_texture_idx = textureCursor++;
         }
-        // 处理materials
-        {
-            let materialDescCursor = cursor.MaterialDescCursor;
-            for (const [_k, v] of this.materialDataMap_) {
-                v.rt_material_idx = materialDescCursor++;
-            }
+        // materials runtime index.
+        let materialDescCursor = cursor.MaterialDescCursor;
+        for (const [_k, v] of this.materialDataMap_) {
+            v.rt_material_idx = materialDescCursor++;
         }
-        // 处理mesh
-        {
-            let meshCursor = cursor.MeshDescCursor;
-            let vertexCursor = cursor.InstanceDescCursor;
-            let meshletCursor = cursor.MeshletDescCursor;
-            let meshletIndicesCursor = cursor.MeshletIndicesCursor;
-            for (const [_key, v] of this.meshDataMap_) {
-                // assign mesh index.
-                v.rt_mesh_idx = meshCursor++;
-                // assign mesh vertex global offset.
-                vertexCursor += v.vertex_count;
-                v.rt_vertex_offset = vertexCursor;
-                // assign meshlet global offset
-                v.meshlets.forEach(meshlet => {
-                    meshletIndicesCursor += meshlet.index_count;
-                    meshlet.rt_index_offset = meshletIndicesCursor;
-                    meshlet.rt_mesh_idx = v.rt_mesh_idx;
-                    meshlet.rt_meshlet_idx = meshletCursor++;
-                });
-            }
+        // mesh\vertex\meshlet\meshlet indices\ runtime index
+        let meshCursor = cursor.MeshDescCursor;
+        let vertexCursor = cursor.InstanceDescCursor;
+        let meshletCursor = cursor.MeshletDescCursor;
+        let meshletIndicesCursor = cursor.MeshletIndicesCursor;
+        for (const [_key, v] of this.meshDataMap_) {
+            // assign mesh index.
+            v.rt_mesh_idx = meshCursor++;
+            // assign mesh vertex global offset.
+            vertexCursor += v.vertex_count;
+            v.rt_vertex_offset = vertexCursor;
+            // assign meshlet global offset
+            v.meshlets.forEach(meshlet => {
+                meshletIndicesCursor += meshlet.index_count;
+                meshlet.rt_index_offset = meshletIndicesCursor;
+                meshlet.rt_mesh_idx = v.rt_mesh_idx;
+                meshlet.rt_meshlet_idx = meshletCursor++;
+            });
         }
-
-        // 准备数据给GPU
-        // instanceDesc Queue
-        // meshDesc Queue
-        // 以instance为单位，组织queue
-        {
-            // due to dep mesh runtime index.
-            // check mesh uuid if allocated.
-            for (const [_k, v] of this.instanceDataMap_) {
-                if (v.needSync && this.meshDataMap_.has(v.mesh_uuid)) {
-                    const rt_mesh_idx = this.meshDataMap_.get(v.mesh_uuid)!.rt_mesh_idx;
-                    const q: InstanceDesc = {
-                        model: v.model,
-                        rt_instance_idx: v.rt_instance_idx,
-                        rt_mesh_idx: rt_mesh_idx,
-                    };
-                    this.instanceDescQueue_.push(q);
-                    v.needSync = false;
-                }
-            }
-
-            // sampler queue.
-            for (const [_k, v] of HardwareDenseMeshFriendlyComponent.SharedSamplerDataMap) {
-                if (v.needSync) {
-                    const q: SamplerDesc = {
-                        blend: v.blend,
-                        uvindex: v.uvindex,
-                        mapping: v.mapping,
-                        map_mode: v.map_mode,
-                        op: v.op,
-                        rt_sampler_idx: v.rt_sampler_idx
-                    };
-                    this.samplerQueue_.push(q);
-                    v.needSync = false;
-                }
-            }
-
-            // texture queue.
-            for (const [_k, v] of this.textureDataMap_) {
-                if (v.needSync) {
-                    const q: TextureDesc = {
-                        width: v.width,
-                        height: v.height,
-                        t: v.t,
-                        data: v.data,
-                        rt_texture_idx: v.rt_texture_idx
-                    };
-                    this.textureQueue_.push(q);
-                    v.needSync = false;
-                }
-            }
-
-            // material queue.
-            // check dep texture. for texture dep runtime_idx
-            for (const [_k, v] of this.materialDataMap_) {
-                // due to material deps texture, need check texture load status first.
-                if (v.needSync) {
-                    const q = this.packMaterialData2Desc(v);
-                    if (q) {
-                        this.materialDescQueue_.push(q);
-                        v.needSync = false;
-                    } else {
-                        console.warn(`[W] materialData convert to queue failed. materialData uuid: ${v.uuid}.`);
-                    }
-                }
-            }
-
-            // queue:
-            // - mesh desc queue. check dep material runtime index.
-            // - meshlet desc queue.
-            // - vertex queue.
-            // - index queue.
-            for (const [_k, v] of this.meshDataMap_) {
-                if (v.needSync) {
-                    // part1: mesh desc
-                    {
-                        const q: MeshDesc = {
-                            bounding_sphere: v.bounding_sphere,
-                            meshlet_count: v.meshlet_count,
-                            rt_mesh_idx: v.rt_mesh_idx,
-                            rt_vertex_offset: v.rt_vertex_offset,
-                            rt_meshlet_offset: v.rt_meshlet_offset,
-                            rt_material_idx: v.rt_material_idx,
-                        };
-                        if (v.material && v.material.uuid && this.materialDataMap_.has(v.material.uuid)) {
-                            v.rt_material_idx = this.materialDataMap_.get(v.material.uuid)!.rt_material_idx;
-                        }
-                        else {
-                            v.rt_material_idx = ERROR_CODE;
-                        }
-                        this.meshDescQueue_.push(q);
-                    }
-                    // part2: meshlet desc
-                    {
-                        v.meshlets.forEach(meshlet => {
-                            const q: MeshletDesc = {
-                                refined_bounding_sphere: meshlet.refined_bounding_sphere,
-                                self_bounding_sphere: meshlet.self_bounding_sphere,
-                                simplified_bounding_sphere: meshlet.simplified_bounding_sphere,
-                                refined_error: meshlet.refined_error,
-                                self_error: meshlet.self_error,
-                                simplified_error: meshlet.simplified_error,
-                                index_count: meshlet.index_count,
-                                rt_meshlet_idx: meshlet.rt_meshlet_idx,
-                                rt_mesh_idx: meshlet.rt_mesh_idx, // v.rt_mesh_idx
-                                rt_index_offset: meshlet.rt_index_offset,
-                            };
-                            this.meshletDescQueue_.push(q);
-                            this.meshletIndicesQueue_.push(meshlet.indices);
-                        });
-
-                    }
-                    // part3: vertex queue.
-                    {
-                        this.vertexQueue_.push(v.vertex);
-                    }
-                    // part4: indices queue.
-                    {
-                        this.indicesQueue_.push(v.indices);
-                    }
-
-                    //
-                    v.needSync = false;
-                }
-            }
-        }
+        // enqueue GPU-Friendly data.
+        this.enqueue();
     }
 
     /**
@@ -1101,9 +1081,9 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
      *  - request meta data.
      *  - for service.
      * @param _args 
-     * @param {Map<string, HardwareDenseMeshFriendlyCursor>} allocatedMap mapping of component uuid and Allocated. 
+     * @param {Map<string, HDMFCursor>} allocatedMap mapping of component uuid and Allocated. 
      */
-    public async update(visualRevealTiles: QuadtreeTile[], LIMIT: number, allocatedMap: Map<string, HardwareDenseMeshFriendlyCursor>): Promise<number> {
+    public async update(visualRevealTiles: QuadtreeTile[], LIMIT: number, allocatedMap: Map<string, HDMFCursor>): Promise<number> {
         // try allocate memory.
         // return while failed.
         if (!allocatedMap.has(this.UUID)) {
@@ -1167,6 +1147,12 @@ class HardwareDenseMeshFriendlyComponent extends BaseComponent {
 }
 
 export {
-    HardwareDenseMeshFriendlyCursor,
-    HardwareDenseMeshFriendlyComponent,
+    type InstanceDesc,
+    type MeshDesc,
+    type MeshletDesc,
+    type MaterialDesc,
+    type TextureDesc,
+    type SamplerDesc,
+    HDMFCursor,
+    HDMFComponent,
 }

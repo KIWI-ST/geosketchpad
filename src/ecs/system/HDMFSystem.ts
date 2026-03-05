@@ -1,144 +1,79 @@
 import type { QuadtreeTile } from "@pipegpu/geography";
-import type { MetaData } from "@pipegpu/spec";
 import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
-import { HardwareDenseMeshFriendlyComponent, HardwareDenseMeshFriendlyCursor } from "../component/HardwareDenseMeshFriendlyComponent";
+import { HDMFComponent, HDMFCursor, type InstanceDesc, type MaterialDesc, type MeshDesc, type MeshletDesc, type SamplerDesc, type TextureDesc } from "../component/HDMFComponent";
 import type { BaseComponent } from "../BaseComponent";
 
 /**
- * @description
- */
-// const _MEMORY_BLOCK_ERR_OFFSET_ = -1;
-
-
-
-// /**
-//  * @description
-//  */
-// type Block = {
-//     /**
-//      * @description
-//      *  实例内存块
-//      */
-//     instanceDescBlock: EntityOffset;
-
-//     /**
-//      * @description
-//      *  网格体内存块
-//      */
-//     meshDescBlock: EntityOffset;
-
-//     /**
-//      * @description
-//      *  材质内存块
-//      */
-//     materialDescBlock: EntityOffset;
-
-//     /**
-//      * @description
-//      *  顶点内存块
-//      */
-//     vertexBlock: EntityOffset;
-
-//     /**
-//      * @description
-//      *  簇内存块
-//      */
-//     meshletDescBlock: EntityOffset;
-
-//     /**
-//      * @description
-//      *  索引内存块
-//      */
-//     meshletIndicesBlock: EntityOffset;
-
-//     /**
-//      * @description
-//      * 未分簇索引内存块
-//      */
-//     indicesBlock: EntityOffset;
-
-//     /**
-//      * @description
-//      * 纹理内存块
-//      */
-//     textureBlock: EntityOffset;
-// };
-
-// /**
-//  * @description 
-//  *  single HDMF memory block.
-//  * @param metaData 
-//  * @returns 
-//  */
-// const createBlock = (metaData: MetaData) => {
-//     const b: Block = {
-//         instanceDescBlock: {
-//             size: metaData.instance_count * 1,
-//             isFree: false,
-//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
-//         },
-//         meshDescBlock: {
-//             size: metaData.mesh_count * 1,
-//             isFree: false,
-//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
-//         },
-//         materialDescBlock: {
-//             size: metaData.material_count * 1,
-//             isFree: false,
-//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
-//         },
-//         vertexBlock: {
-//             size: metaData.vertex_count * 1,
-//             isFree: false,
-//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
-//         },
-//         meshletDescBlock: {
-//             size: metaData.meshlet_count * 1,
-//             isFree: false,
-//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
-//         },
-//         meshletIndicesBlock: {
-//             size: metaData.meshlet_indices_count * 1,
-//             isFree: false,
-//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
-//         },
-//         indicesBlock: {
-//             size: metaData.indices_count * 1,
-//             isFree: false,
-//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
-//         },
-//         textureBlock: {
-//             size: metaData.texture_count * 1,
-//             isFree: false,
-//             runtimeByteOffset: _MEMORY_BLOCK_ERR_OFFSET_,
-//         }
-//     };
-//     return b;
-// }
-
-/**
+ * @class HDMF, HardwareDenseMeshFriendly
  * @description MeshSystem
  * - gpu-driven mesh system. all vertex in single big buffer.
  * - support mesh in streaming
  */
-class HardwareDenseMeshFriendlySystem extends BaseSystem {
+class HDMFSystem extends BaseSystem {
     /**
      * @description
      * per frame task count.
      */
     private perFrameLimit_: number = 8;
 
+    private instanceDescQueue_: InstanceDesc[] = [];
+    public get InstanceDescQueue(): InstanceDesc[] {
+        return this.instanceDescQueue_;
+    }
+
+    private meshDescQueue_: MeshDesc[] = [];
+    public get MeshDescQueue(): MeshDesc[] {
+        return this.meshDescQueue_;
+    }
+
+
+    private meshletDescQueue_: MeshletDesc[] = [];
+    public get MeshletDescQueue(): MeshletDesc[] {
+        return this.meshletDescQueue_;
+    }
+
+    private materialDescQueue_: MaterialDesc[] = [];
+    public get MaterialDescQueue(): MaterialDesc[] {
+        return this.materialDescQueue_;
+    }
+
+    private textureQueue_: TextureDesc[] = [];
+    public get TextureQueue(): TextureDesc[] {
+        return this.textureQueue_;
+    }
+
+
+    private vertexQueue_: Float32Array[] = [];
+    public get VertexQueue(): Float32Array[] {
+        return this.vertexQueue_;
+    }
+
+    private meshletIndicesQueue_: Uint32Array[] = [];
+    public get MeshletIndicesQueue(): Uint32Array[] {
+        return this.meshletIndicesQueue_;
+    }
+
+    private indicesQueue_: Uint32Array[] = [];
+    public get IndicesQueue(): Uint32Array[] {
+        return this.indicesQueue_;
+    }
+
+    private samplerQueue_: SamplerDesc[] = [];
+    public get SamplerQueue(): SamplerDesc[] {
+        return this.samplerQueue_;
+    }
+
     /**
      * @description
      *  mapping of HDMFComponent UUID and HMDFComponent Cursor.
      */
-    private allocatedMap_: Map<string, HardwareDenseMeshFriendlyCursor> = new Map();
+    private allocatedMap_: Map<string, HDMFCursor> = new Map();
 
     /**
      * @description
      */
-    public get AllocatedMap(): Map<string, HardwareDenseMeshFriendlyCursor> {
+    public get AllocatedMap(): Map<string, HDMFCursor> {
         return this.allocatedMap_;
     }
 
@@ -154,7 +89,7 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
      */
     private refreshSharedMemory = () => {
         let samplerCursor = 0;
-        for (const [_k, v] of HardwareDenseMeshFriendlyComponent.SharedSamplerDataMap) {
+        for (const [_k, v] of HDMFComponent.SharedSamplerDataMap) {
             v.rt_sampler_idx = samplerCursor++;
         }
     }
@@ -171,12 +106,12 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
     private tryAllocatedMemory = (componentMap: Map<string, BaseComponent>): boolean => {
         // register hdmf uuid with cursor memory.
         for (const [_entityUUID, v] of componentMap) {
-            const c = v as HardwareDenseMeshFriendlyComponent;
+            const c = v as HDMFComponent;
             const metaData = c.MetaData;
             if (!metaData) {
                 continue;
             }
-            const initCur: HardwareDenseMeshFriendlyCursor = new HardwareDenseMeshFriendlyCursor();
+            const initCur: HDMFCursor = new HDMFCursor();
             {
                 initCur.InstanceDescCursor = metaData.instance_count;
                 initCur.MeshDescCursor = metaData.mesh_count;
@@ -192,10 +127,10 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
         }
         // update alloacted map
         // cursor for hdmf allocated.
-        const globalCur: HardwareDenseMeshFriendlyCursor = new HardwareDenseMeshFriendlyCursor();
+        const globalCur: HDMFCursor = new HDMFCursor();
         for (const [_k, v] of this.allocatedMap_) {
             // copy cursor.
-            const copyedCur = new HardwareDenseMeshFriendlyCursor();
+            const copyedCur = new HDMFCursor();
             copyedCur.copy(v);
             // copy global cur to v.
             v.copy(globalCur);
@@ -205,6 +140,22 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
         // update shared memory, static cached in HDMFComponent.
         this.refreshSharedMemory();
         return true;
+    }
+
+    /**
+     * 
+     * @param component 
+     */
+    private enqueue(component: HDMFComponent) {
+        this.instanceDescQueue_.push(...component.InstanceDescQueue.splice(0));
+        this.meshDescQueue_.push(...component.MeshDescQueue.splice(0));
+        this.meshletDescQueue_.push(...component.meshletDescQueue.splice(0));
+        this.materialDescQueue_.push(...component.MaterialDescQueue.splice(0));
+        this.textureQueue_.push(...component.TextureQueue.splice(0));
+        this.vertexQueue_.push(...component.VertexQueue.splice(0));
+        this.meshletIndicesQueue_.push(...component.MeshletIndicesQueue.splice(0));
+        this.indicesQueue_.push(...component.IndicesQueue.splice(0));
+        this.samplerQueue_.push(...component.SamplerQueue.splice(0));
     }
 
     /**
@@ -230,10 +181,12 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
                 if (!c.IsEnable) {
                     continue;
                 }
-                const component = c as HardwareDenseMeshFriendlyComponent;
+                const component = c as HDMFComponent;
                 const visualRevealTiles = visualRevealTilesMap?.get(key);
                 if (visualRevealTiles) {
                     quotaCount = await component.update(visualRevealTiles, quotaCount, this.allocatedMap_);
+                    // queue update.
+                    this.enqueue(component);
                     // computing power exhausted, cancel.
                     if (quotaCount <= 0) {
                         return;
@@ -246,12 +199,10 @@ class HardwareDenseMeshFriendlySystem extends BaseSystem {
                 console.error(`[E][MeshSystem][Update] type 'HardwareDenseMeshFriendlyComponent' update failed, key: ${key}.`);
             }
         }
-
         //
-
     }
 }
 
 export {
-    HardwareDenseMeshFriendlySystem
+    HDMFSystem
 }

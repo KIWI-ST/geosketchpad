@@ -3,7 +3,7 @@ import { OrbitCameraComponent, Scene } from "./src";
 import { PerspectiveCamera } from "@pipegpu/camera";
 import { CartoPosition, webMercatorTileSchema, WGS84 } from "@pipegpu/geography";
 import { EllipsoidComponent } from "./src/ecs/component/EllipsoidComponent";
-import { HardwareDenseMeshFriendlyComponent } from "./src/ecs/component/HardwareDenseMeshFriendlyComponent";
+import { HDMFComponent } from "./src/ecs/component/HDMFComponent";
 
 (async () => {
 
@@ -46,7 +46,7 @@ import { HardwareDenseMeshFriendlyComponent } from "./src/ecs/component/Hardware
         scene.setComponent(earthEntity, earthComponent);
 
         // hdmf component.
-        const hdmfComponent: HardwareDenseMeshFriendlyComponent = new HardwareDenseMeshFriendlyComponent(`http://127.0.0.1/service/DamagedHelmet/`, WGS84, new CartoPosition(116.397128, 39.917527));
+        const hdmfComponent: HDMFComponent = new HDMFComponent(`http://127.0.0.1/service/DamagedHelmet/`, WGS84, new CartoPosition(116.397128, 39.917527));
         await hdmfComponent.enable(true);
         scene.setComponent(earthEntity, hdmfComponent);
     }

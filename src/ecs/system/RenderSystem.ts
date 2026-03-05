@@ -29,6 +29,7 @@ type GraphResource = {
 /**
  * @class RenderSystem
  * @description
+ *  WARNING!!! only support HDMFv2 Spec Rendering.
  * - with render graph.
  * - register render resource.
  */

@@ -2,7 +2,7 @@ import { Compiler, Context, type IContextOpts } from "@pipegpu/core";
 import { Scene } from './Scene'
 import { SceneBus } from "../bus/SceneBus";
 import { CameraSystem } from "../ecs/system/CameraSystem";
-import { HardwareDenseMeshFriendlySystem } from "../ecs/system/HardwareDenseMeshFriendlySystem";
+import { HDMFSystem } from "../ecs/system/HDMFSystem";
 import { RenderSystem } from "../ecs/system/RenderSystem";
 import { EllipsoidSystem } from "../ecs/system/EllipsoidSystem";
 import { now } from "../util/now";
@@ -59,7 +59,7 @@ declare module './Scene' {
         _state_system_: {
             cameraSystem: CameraSystem,
             ellipsoidSystem: EllipsoidSystem,
-            hdmfSystem: HardwareDenseMeshFriendlySystem,
+            hdmfSystem: HDMFSystem,
             renderSystem: RenderSystem,
         };
     }
@@ -158,7 +158,7 @@ Scene.registerHook(
             scene._state_system_ = {
                 cameraSystem: new CameraSystem(scene),
                 ellipsoidSystem: new EllipsoidSystem(scene),
-                hdmfSystem: new HardwareDenseMeshFriendlySystem(scene),
+                hdmfSystem: new HDMFSystem(scene),
                 renderSystem: new RenderSystem(scene),
             };
             await scene._state_renderer_.ctx3d.init();
