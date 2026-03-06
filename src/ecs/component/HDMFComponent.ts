@@ -1,4 +1,4 @@
-import { mat4d, type Mat4, type Vec4 } from "wgpu-matrix";
+import { mat4d, vec2n, type Mat4, type Vec2n, type Vec4 } from "wgpu-matrix";
 import { CartoPosition, Ellipsoid, QuadtreeTile } from "@pipegpu/geography";
 import {
     fetchHDMF,
@@ -139,6 +139,17 @@ class HDMFCursor {
     /**
      * @description
      */
+    private instanceMeshletMapCursor_: number = 0;
+    public get InstanceMeshletMapCursor(): number {
+        return this.instanceMeshletMapCursor_;
+    }
+    public set InstanceMeshletMapCursor(v: number) {
+        this.instanceMeshletMapCursor_ = v;
+    }
+
+    /**
+     * @description
+     */
     constructor() { }
 
 
@@ -157,6 +168,7 @@ class HDMFCursor {
         this.meshletIndicesCursor_ = v.meshletIndicesCursor_;
         this.materialDescCursor_ = v.materialDescCursor_;
         this.textureCursor_ = v.textureCursor_;
+        this.instanceMeshletMapCursor_ = v.instanceMeshletMapCursor_;
     }
 
     /**
@@ -174,6 +186,7 @@ class HDMFCursor {
         this.meshletIndicesCursor_ += v.meshletIndicesCursor_;
         this.materialDescCursor_ += v.materialDescCursor_;
         this.textureCursor_ += v.textureCursor_;
+        this.instanceMeshletMapCursor_ += v.instanceMeshletMapCursor_;
     }
 }
 
@@ -644,6 +657,18 @@ class HDMFComponent extends BaseComponent {
     }
 
     /**
+     * queue:
+     * [
+     *     [uint32_t, uint32_t]
+     *     [uint32_t, uint32_t]
+     * ]
+     */
+    private instanceMeshletMapQueue_: Vec2n[] = [];
+    public get InstanceMeshletMapQueue(): Vec2n[] {
+        return this.instanceMeshletMapQueue_;
+    }
+
+    /**
      * @description
      *  mapping of instance uuid and instance data.
      * - related mesh uuid.
@@ -922,15 +947,26 @@ class HDMFComponent extends BaseComponent {
         }
 
         // instance desc enqueue.
+        // enqueue instance and meshlet runtime index.
         for (const [_k, v] of this.instanceDataMap_) {
-            if (!v.needSync || !this.meshDataMap_.has(v.mesh_uuid)) {
+            if (!v.needSync) {
                 continue;
             }
-            const rt_mesh_idx = this.meshDataMap_.get(v.mesh_uuid)!.rt_mesh_idx;
+            // wait mesh data load.
+            const meshData = this.meshDataMap_.get(v.mesh_uuid);
+            if (!meshData) {
+                continue;
+            }
+            // enqueue mapping of <instance id, meshlet>.
+            meshData.meshlets.forEach(meshletData => {
+                const q: Vec2n = vec2n.create(v.rt_instance_idx, meshletData.rt_meshlet_idx);
+                this.instanceMeshletMapQueue_.push(q);
+            });
+            // enqueue instance desc.
             const q: InstanceDesc = {
                 model: v.model,
                 rt_instance_idx: v.rt_instance_idx,
-                rt_mesh_idx: rt_mesh_idx,
+                rt_mesh_idx: meshData.rt_mesh_idx,
                 rt_scene_idx: this.sceneData_.rt_hdmf_idx,
             };
             this.instanceDescQueue_.push(q);

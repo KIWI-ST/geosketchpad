@@ -3,6 +3,7 @@ import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
 import { HDMFComponent, HDMFCursor, type InstanceDesc, type MaterialDesc, type MeshDesc, type MeshletDesc, type SamplerDesc, type SceneDesc, type TextureDesc } from "../component/HDMFComponent";
 import type { BaseComponent } from "../BaseComponent";
+import type { Vec2, Vec2n } from "wgpu-matrix";
 
 /**
  * @class HDMF, HardwareDenseMeshFriendly
@@ -69,6 +70,11 @@ class HDMFSystem extends BaseSystem {
         return this.samplerQueue_;
     }
 
+    private instanceMeshletMapQueue_: Vec2n[] = [];
+    public get InstanceMeshletMapQueue(): Vec2n[] {
+        return this.instanceMeshletMapQueue_;
+    }
+
     /**
      * @description
      *  mapping of HDMFComponent UUID and HMDFComponent Cursor.
@@ -119,7 +125,8 @@ class HDMFSystem extends BaseSystem {
             }
             const initCur: HDMFCursor = new HDMFCursor();
             {
-                initCur.HdmfSceneDescCursor = c.HDMFSceneData.rt_hdmf_idx = hdmfSceneCount++; // hdmf runtime index.
+                // hdmf runtime index.
+                initCur.HdmfSceneDescCursor = c.HDMFSceneData.rt_hdmf_idx = hdmfSceneCount++;
                 initCur.IndirectCursor = metaData.instance_spread_meshlet_count;
                 initCur.InstanceDescCursor = metaData.instance_count;
                 initCur.MeshDescCursor = metaData.mesh_count;
@@ -129,6 +136,7 @@ class HDMFSystem extends BaseSystem {
                 initCur.MeshletIndicesCursor = metaData.meshlet_indices_count;
                 initCur.MaterialDescCursor = metaData.material_count;
                 initCur.TextureCursor = metaData.texture_count;
+                initCur.InstanceMeshletMapCursor = metaData.instance_spread_meshlet_count;
             }
             const componentUUID = c.UUID;
             this.allocatedMap_.set(componentUUID, initCur);
@@ -165,6 +173,7 @@ class HDMFSystem extends BaseSystem {
         this.meshletIndicesQueue_.push(...component.MeshletIndicesQueue.splice(0));
         this.indicesQueue_.push(...component.IndicesQueue.splice(0));
         this.samplerQueue_.push(...component.SamplerQueue.splice(0));
+        this.instanceMeshletMapQueue_.push(...component.InstanceMeshletMapQueue.splice(0));
     }
 
     /**

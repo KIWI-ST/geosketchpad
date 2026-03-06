@@ -4,6 +4,9 @@ import { vec3d, type Vec3d } from "wgpu-matrix";
 
 import { BaseComponent } from "../BaseComponent";
 
+/**
+ * @description
+ */
 const MAXIMUM_SCREEN_SPACEERROR = 2.0;
 
 /**
@@ -111,7 +114,7 @@ class EllipsoidComponent extends BaseComponent {
     private computeSpaceError = (quadtreeTile: QuadtreeTile, camera: Camera, ch: number): number => {
         const level = quadtreeTile.Level,
             maxGeometricError = this.geometricErrors_[level],
-            sseDenominator = camera.getSseDenominator(),
+            sseDenominator = camera.fetchSseDenominator(),
             height = ch;
         const positionCartographic = this.ellipsoid_.wsPosition2cartoPosition(camera.Position);
         const distance = positionCartographic.Altitude;
@@ -225,7 +228,7 @@ class EllipsoidComponent extends BaseComponent {
     public async update(camera: Camera, cw: number, ch: number): Promise<void> {
         // geometricError and maximumCameraHeight init.
         if (this.geometricErrors_.length === 0 && this.maximumCameraHeights_.length === 0) {
-            this.refreshQuadTree(camera.getSseDenominator(), ch);
+            this.refreshQuadTree(camera.fetchSseDenominator(), ch);
         }
         this.updateQuadtreeTileByDistanceError(camera, cw, ch);
     }

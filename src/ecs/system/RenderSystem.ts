@@ -1,4 +1,4 @@
-import { IndexedStorageSnippet, OrderedGraph, VertexSnippet, ViewPlaneSnippet, ViewProjectionSnippet } from "@pipegpu/graph";
+import { IndexedStorageSnippet, OrderedGraph, StorageVec2U32Snippet, VertexSnippet, ViewPlaneSnippet, ViewProjectionSnippet, ViewSnippet } from "@pipegpu/graph";
 import { IndexedStorageBuffer, StorageBuffer, UniformBuffer, type BufferHandle } from "@pipegpu/core";
 import type { Camera } from "@pipegpu/camera";
 import type { Scene } from "../../scene/Scene";
@@ -18,6 +18,10 @@ type RES = {
         snippet: ViewPlaneSnippet,
         viewPlaneBuffer: UniformBuffer,
     };
+    'ViewBuffer'?: {
+        snippet: ViewSnippet,
+        viewBuffer: UniformBuffer,
+    },
     'VertexBuffer'?: {
         snippet: VertexSnippet,
         vertexBuffer: StorageBuffer,
@@ -26,9 +30,19 @@ type RES = {
         snippet: IndexedStorageSnippet,
         indexedStorageBuffer: IndexedStorageBuffer,
     };
-    'MeshletIndicesStorageBuffer'?: {
+    /**
+     * @description
+     * 全局加入场景的instance, 对应的mesh下运行时meshlet在全局的索引；
+     * 形态如：
+     * (0, 1) 全局地0个instance, 他由全局id为1的meshlet组成；
+     * (0, 3) 全局地0个instance, 他由全局id为3的meshlet组成；
+     * (0, 7) 全局地0个instance, 他由全局id为7的meshlet组成；
+     */
+    'InstanceMeshletBuffer'?: {
+        snippet: StorageVec2U32Snippet,
+        instanceMeshletBuffer: StorageBuffer,
+    };
 
-    }
 };
 
 /**
@@ -128,6 +142,7 @@ class RenderSystem extends BaseSystem {
         if (this.res_.ViewPlaneBuffer) {
             return;
         }
+        const bLen = 4 * 4 * 6;
         const compiler = this.scene_._state_renderer_.cpl3d;
         const handler: BufferHandle = () => {
             const viewRTE = getViewRTE(this.camera_!.ViewMatrix);
@@ -225,18 +240,64 @@ class RenderSystem extends BaseSystem {
                 rewrite: true,
                 detail: {
                     offset: 0,
-                    byteLength: 4 * 4 * 6,
+                    byteLength: bLen,
                     rawData: rawDataf32
                 }
             }
         };
         const viewPlaneBuffer = compiler.createUniformBuffer({
-            totalByteLength: 4 * 4 * 6,
+            totalByteLength: bLen,
             handler: handler,
         });
         this.res_.ViewPlaneBuffer = {
             viewPlaneBuffer: viewPlaneBuffer,
             snippet: new ViewPlaneSnippet(compiler),
+        };
+    }
+
+    /**
+     * @description
+     */
+    private refreshViewBuffer = (camera: Camera) => {
+        this.camera_ = camera;
+        if (this.res_.ViewBuffer) {
+            return;
+        }
+        const bLen = 64;
+        const scene = this.scene_;
+        const compiler = this.scene_._state_renderer_.cpl3d;
+        const handler: BufferHandle = () => {
+            const c = this.camera_!;
+            const rawDataF32 = new Float32Array([
+                c.Position[0],
+                c.Position[1],
+                c.Position[2],
+                c.fetchVerticalScalingFactor(),
+                scene.Width,
+                scene.Height,
+                c.fetchNear(),
+                c.fetchFar(),
+                0.1,                            // TODO, pixel threshold.
+                1.0,                            // TODO, software reasteriazer threshold.
+                c.fetchFarDepthFromNearPlusOne(),
+                c.fetchOneOverLog2FarDepthFromNearPlusOne()
+            ]);
+            return {
+                rewrite: true,
+                detail: {
+                    offset: 0,
+                    byteLength: bLen,
+                    rawData: rawDataF32,
+                }
+            }
+        };
+        const viewBuffer = compiler.createUniformBuffer({
+            totalByteLength: bLen,
+            handler: handler,
+        })
+        this.res_.ViewBuffer = {
+            snippet: new ViewSnippet(compiler),
+            viewBuffer: viewBuffer,
         };
     }
 
@@ -262,6 +323,7 @@ class RenderSystem extends BaseSystem {
     ): Promise<void> {
         this.refreshViewProjectionBuffer(opts.camera);
         this.refreshViewPlaneBuffer(opts.camera);
+        this.refreshViewBuffer(opts.camera);
         // this.initVertex();
         // renderOpaque()
         // renderStataic
