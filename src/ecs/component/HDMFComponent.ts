@@ -193,6 +193,86 @@ class HDMFCursor {
 /**
  * @description
  */
+type HDMFQueueGroup = {
+    /**
+     * @description
+     */
+    sceneDescQueue_: SceneDesc[];
+
+    /**
+     * @description
+     */
+    instanceDescQueue_: InstanceDesc[];
+
+    /**
+     * @description
+     */
+    meshDescQueue_: MeshDesc[];
+
+    /**
+     * @description
+     */
+    meshletDescQueue_: MeshletDesc[];
+
+    /**
+     * @description
+     */
+    materialDescQueue_: MaterialDesc[];
+
+    /**
+     * @description
+     */
+    textureQueue_: TextureDesc[];
+
+    /**
+     * @description
+     */
+    vertexQueue_: Float32Array[];
+
+    /**
+     * @description
+     */
+    meshletIndicesQueue_: Uint32Array[];
+
+    /**
+     * @description
+     */
+    indicesQueue_: Uint32Array[];
+
+    /**
+     * @description
+     */
+    samplerQueue_: SamplerDesc[];
+
+    /**
+     * @description
+     */
+    instanceMeshletMapQueue_: Vec2n[];
+};
+
+/**
+ * 
+ * @returns 
+ */
+const initQueueGroup = (): HDMFQueueGroup => {
+    return {
+        sceneDescQueue_: [],
+        instanceDescQueue_: [],
+        meshDescQueue_: [],
+        meshletDescQueue_: [],
+        materialDescQueue_: [],
+        textureQueue_: [],
+        vertexQueue_: [],
+        meshletIndicesQueue_: [],
+        indicesQueue_: [],
+        samplerQueue_: [],
+        instanceMeshletMapQueue_: [],
+    }
+}
+
+/**
+ * @description
+ */
 type LoadingStatus = 'done' | 'pending';
 
 /**
@@ -536,7 +616,7 @@ class HDMFComponent extends BaseComponent {
     private ellipsoid_: Ellipsoid;
 
     /**
-     * 
+     * @description
      */
     private rootDir_: string;
 
@@ -579,93 +659,13 @@ class HDMFComponent extends BaseComponent {
     /**
      * @description
      */
-    private sceneDescQueue_: SceneDesc[] = [];
-    public get HDMFSceneDescQueue(): SceneDesc[] {
-        return this.sceneDescQueue_;
-    }
+    private group_: HDMFQueueGroup;
 
     /**
-     * 
+     * @description
      */
-    private instanceDescQueue_: InstanceDesc[] = [];
-    public get InstanceDescQueue(): InstanceDesc[] {
-        return this.instanceDescQueue_;
-    }
-
-    /**
-     * 
-     */
-    private meshDescQueue_: MeshDesc[] = [];
-    public get MeshDescQueue(): MeshDesc[] {
-        return this.meshDescQueue_;
-    }
-
-    /**
-     * 
-     */
-    private meshletDescQueue_: MeshletDesc[] = [];
-    public get meshletDescQueue(): MeshletDesc[] {
-        return this.meshletDescQueue_;
-    }
-
-    /**
-     * 
-     */
-    private materialDescQueue_: MaterialDesc[] = [];
-    public get MaterialDescQueue(): MaterialDesc[] {
-        return this.materialDescQueue_;
-    }
-
-    /**
-     * 
-     */
-    private textureQueue_: TextureDesc[] = [];
-    public get TextureQueue(): TextureDesc[] {
-        return this.textureQueue_;
-    }
-
-    /**
-     * 
-     */
-    private vertexQueue_: Float32Array[] = [];
-    public get VertexQueue(): Float32Array[] {
-        return this.vertexQueue_;
-    }
-
-    /**
-     * 
-     */
-    private meshletIndicesQueue_: Uint32Array[] = [];
-    public get MeshletIndicesQueue(): Uint32Array[] {
-        return this.meshletIndicesQueue_;
-    }
-
-    /**
-     * 
-     */
-    private indicesQueue_: Uint32Array[] = [];
-    public get IndicesQueue(): Uint32Array[] {
-        return this.indicesQueue_;
-    }
-
-    /**
-     * 
-     */
-    private samplerQueue_: SamplerDesc[] = [];
-    public get SamplerQueue(): SamplerDesc[] {
-        return this.samplerQueue_;
-    }
-
-    /**
-     * queue:
-     * [
-     *     [uint32_t, uint32_t]
-     *     [uint32_t, uint32_t]
-     * ]
-     */
-    private instanceMeshletMapQueue_: Vec2n[] = [];
-    public get InstanceMeshletMapQueue(): Vec2n[] {
-        return this.instanceMeshletMapQueue_;
+    public get Group(): HDMFQueueGroup {
+        return this.group_;
     }
 
     /**
@@ -718,6 +718,7 @@ class HDMFComponent extends BaseComponent {
         this.positionCarto_ = positionCarto;
         this.ellipsoid_ = ellipsoid;
         this.sceneData_ = { needSync: true, model: mat4d.identity(), rt_hdmf_idx: ERROR_CODE };
+        this.group_ = initQueueGroup();
     }
 
     /**
@@ -942,7 +943,7 @@ class HDMFComponent extends BaseComponent {
                 model: this.sceneData_.model,
                 rt_hdmf_idx: this.sceneData_.rt_hdmf_idx
             };
-            this.sceneDescQueue_.push(q);
+            this.group_.sceneDescQueue_.push(q);
             this.sceneData_.needSync = false;
         }
 
@@ -960,7 +961,7 @@ class HDMFComponent extends BaseComponent {
             // enqueue mapping of <instance id, meshlet>.
             meshData.meshlets.forEach(meshletData => {
                 const q: Vec2n = vec2n.create(v.rt_instance_idx, meshletData.rt_meshlet_idx);
-                this.instanceMeshletMapQueue_.push(q);
+                this.group_.instanceMeshletMapQueue_.push(q);
             });
             // enqueue instance desc.
             const q: InstanceDesc = {
@@ -969,7 +970,7 @@ class HDMFComponent extends BaseComponent {
                 rt_mesh_idx: meshData.rt_mesh_idx,
                 rt_scene_idx: this.sceneData_.rt_hdmf_idx,
             };
-            this.instanceDescQueue_.push(q);
+            this.group_.instanceDescQueue_.push(q);
             v.needSync = false;
         }
         // sampler desc enqueue.
@@ -985,7 +986,7 @@ class HDMFComponent extends BaseComponent {
                 op: v.op,
                 rt_sampler_idx: v.rt_sampler_idx
             };
-            this.samplerQueue_.push(q);
+            this.group_.samplerQueue_.push(q);
             v.needSync = false;
         }
         // texture enqueue
@@ -1000,7 +1001,7 @@ class HDMFComponent extends BaseComponent {
                 data: v.data,
                 rt_texture_idx: v.rt_texture_idx
             };
-            this.textureQueue_.push(q);
+            this.group_.textureQueue_.push(q);
             v.needSync = false;
         }
         // material desc enqueue
@@ -1009,7 +1010,7 @@ class HDMFComponent extends BaseComponent {
             if (v.needSync) {
                 const q = this.packMaterialData2Desc(v);
                 if (q) {
-                    this.materialDescQueue_.push(q);
+                    this.group_.materialDescQueue_.push(q);
                     v.needSync = false;
                 } else {
                     console.warn(`[W] materialData convert to queue failed. materialData uuid: ${v.uuid}.`);
@@ -1038,7 +1039,7 @@ class HDMFComponent extends BaseComponent {
                 rt_meshlet_offset: v.rt_meshlet_offset,
                 rt_material_idx: rt_material_idx
             };
-            this.meshDescQueue_.push(q);
+            this.group_.meshDescQueue_.push(q);
             // meshlet desc enqueue.
             v.meshlets.forEach(meshlet => {
                 const q: MeshletDesc = {
@@ -1054,14 +1055,14 @@ class HDMFComponent extends BaseComponent {
                     rt_index_offset: meshlet.rt_index_offset,
                 };
                 // meshlet desc enqueue.
-                this.meshletDescQueue_.push(q);
+                this.group_.meshletDescQueue_.push(q);
                 // meshlet indices enqueue.
-                this.meshletIndicesQueue_.push(meshlet.indices);
+                this.group_.meshletIndicesQueue_.push(meshlet.indices);
             });
             // vertex enqueue.
-            this.vertexQueue_.push(v.vertex);
+            this.group_.vertexQueue_.push(v.vertex);
             // indices enqueue.
-            this.indicesQueue_.push(v.indices);
+            this.group_.indicesQueue_.push(v.indices);
             v.needSync = false;
         }
     }
@@ -1182,6 +1183,8 @@ class HDMFComponent extends BaseComponent {
 }
 
 export {
+    initQueueGroup,
+    type HDMFQueueGroup,
     type SceneDesc,
     type InstanceDesc,
     type MeshDesc,

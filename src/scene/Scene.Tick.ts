@@ -95,7 +95,8 @@ Scene.prototype.tick = async function (tickCount?: number): Promise<void> {
  *  - meshlet or fallback rendering.
  */
 Scene.prototype.systemUpdate = async function (_timeStamp: number): Promise<void> {
-    // 1. camera update.
+    // camera update.
+    // pick main Camera, skip update if missing mainCamera.
     const cameraSys = this._state_system_.cameraSystem;
     await cameraSys.update();
     if (!cameraSys.hasMainCamera() && !cameraSys.MainCamera) {
@@ -112,6 +113,10 @@ Scene.prototype.systemUpdate = async function (_timeStamp: number): Promise<void
     // hdmf update.
     const hdmfSys = this._state_system_.hdmfSystem;
     await hdmfSys.update(ellipsoidSys.VisualRevealTilesMap);
+
+    // render system update
+    const renderSys = this._state_system_.renderSystem;
+    await renderSys.update(camera, hdmfSys.Group, hdmfSys.StatsCursor, cw, ch);
 }
 
 /**

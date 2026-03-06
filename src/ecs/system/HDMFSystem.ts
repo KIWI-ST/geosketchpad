@@ -1,9 +1,9 @@
 import type { QuadtreeTile } from "@pipegpu/geography";
 import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
-import { HDMFComponent, HDMFCursor, type InstanceDesc, type MaterialDesc, type MeshDesc, type MeshletDesc, type SamplerDesc, type SceneDesc, type TextureDesc } from "../component/HDMFComponent";
+import { HDMFComponent, HDMFCursor, initQueueGroup, type HDMFQueueGroup } from "../component/HDMFComponent";
 import type { BaseComponent } from "../BaseComponent";
-import type { Vec2, Vec2n } from "wgpu-matrix";
+
 
 /**
  * @class HDMF, HardwareDenseMeshFriendly
@@ -18,61 +18,16 @@ class HDMFSystem extends BaseSystem {
      */
     private perFrameLimit_: number = 8;
 
-    private hdmfSceneDescQueue_: SceneDesc[] = [];
-    public get HdmfSceneDescQueue(): SceneDesc[] {
-        return this.hdmfSceneDescQueue_;
-    }
+    /**
+     * 
+     */
+    private group_: HDMFQueueGroup;
 
-    private instanceDescQueue_: InstanceDesc[] = [];
-    public get InstanceDescQueue(): InstanceDesc[] {
-        return this.instanceDescQueue_;
-    }
-
-    private meshDescQueue_: MeshDesc[] = [];
-    public get MeshDescQueue(): MeshDesc[] {
-        return this.meshDescQueue_;
-    }
-
-
-    private meshletDescQueue_: MeshletDesc[] = [];
-    public get MeshletDescQueue(): MeshletDesc[] {
-        return this.meshletDescQueue_;
-    }
-
-    private materialDescQueue_: MaterialDesc[] = [];
-    public get MaterialDescQueue(): MaterialDesc[] {
-        return this.materialDescQueue_;
-    }
-
-    private textureQueue_: TextureDesc[] = [];
-    public get TextureQueue(): TextureDesc[] {
-        return this.textureQueue_;
-    }
-
-
-    private vertexQueue_: Float32Array[] = [];
-    public get VertexQueue(): Float32Array[] {
-        return this.vertexQueue_;
-    }
-
-    private meshletIndicesQueue_: Uint32Array[] = [];
-    public get MeshletIndicesQueue(): Uint32Array[] {
-        return this.meshletIndicesQueue_;
-    }
-
-    private indicesQueue_: Uint32Array[] = [];
-    public get IndicesQueue(): Uint32Array[] {
-        return this.indicesQueue_;
-    }
-
-    private samplerQueue_: SamplerDesc[] = [];
-    public get SamplerQueue(): SamplerDesc[] {
-        return this.samplerQueue_;
-    }
-
-    private instanceMeshletMapQueue_: Vec2n[] = [];
-    public get InstanceMeshletMapQueue(): Vec2n[] {
-        return this.instanceMeshletMapQueue_;
+    /**
+     * @description
+     */
+    public get Group(): HDMFQueueGroup {
+        return this.Group;
     }
 
     /**
@@ -89,10 +44,20 @@ class HDMFSystem extends BaseSystem {
     }
 
     /**
+     * @description 
+     *  stats hdmf cursor.
+     */
+    private statsCur_: HDMFCursor = new HDMFCursor();
+    public get StatsCursor(): HDMFCursor {
+        return this.statsCur_;
+    }
+
+    /**
      * @param scene 
      */
     constructor(scene: Scene) {
         super(scene);
+        this.group_ = initQueueGroup();
     }
 
     /**
@@ -116,7 +81,6 @@ class HDMFSystem extends BaseSystem {
      */
     private tryAllocatedMemory = (componentMap: Map<string, BaseComponent>): boolean => {
         // register hdmf uuid with cursor memory.
-        let hdmfSceneCount = 0;
         for (const [_entityUUID, v] of componentMap) {
             const c = v as HDMFComponent;
             const metaData = c.MetaData;
@@ -126,7 +90,7 @@ class HDMFSystem extends BaseSystem {
             const initCur: HDMFCursor = new HDMFCursor();
             {
                 // hdmf runtime index.
-                initCur.HdmfSceneDescCursor = c.HDMFSceneData.rt_hdmf_idx = hdmfSceneCount++;
+                initCur.HdmfSceneDescCursor = 1;
                 initCur.IndirectCursor = metaData.instance_spread_meshlet_count;
                 initCur.InstanceDescCursor = metaData.instance_count;
                 initCur.MeshDescCursor = metaData.mesh_count;
@@ -153,27 +117,29 @@ class HDMFSystem extends BaseSystem {
             // update global cur with copyed offset.
             globalCur.plus(copyedCur);
         }
+        // statc cursor
+        this.statsCur_.copy(globalCur);
         // update shared memory, static cached in HDMFComponent.
         this.refreshSharedMemory();
         return true;
     }
 
     /**
-     * 
+     * @description
      * @param component 
      */
     private enqueue(component: HDMFComponent) {
-        this.hdmfSceneDescQueue_.push(...component.HDMFSceneDescQueue.splice(0));
-        this.instanceDescQueue_.push(...component.InstanceDescQueue.splice(0));
-        this.meshDescQueue_.push(...component.MeshDescQueue.splice(0));
-        this.meshletDescQueue_.push(...component.meshletDescQueue.splice(0));
-        this.materialDescQueue_.push(...component.MaterialDescQueue.splice(0));
-        this.textureQueue_.push(...component.TextureQueue.splice(0));
-        this.vertexQueue_.push(...component.VertexQueue.splice(0));
-        this.meshletIndicesQueue_.push(...component.MeshletIndicesQueue.splice(0));
-        this.indicesQueue_.push(...component.IndicesQueue.splice(0));
-        this.samplerQueue_.push(...component.SamplerQueue.splice(0));
-        this.instanceMeshletMapQueue_.push(...component.InstanceMeshletMapQueue.splice(0));
+        this.group_.sceneDescQueue_.push(...component.Group.sceneDescQueue_.splice(0));
+        this.group_.instanceDescQueue_.push(...component.Group.instanceDescQueue_.splice(0));
+        this.group_.meshDescQueue_.push(...component.Group.meshDescQueue_.splice(0));
+        this.group_.meshletDescQueue_.push(...component.Group.meshletDescQueue_.splice(0));
+        this.group_.materialDescQueue_.push(...component.Group.materialDescQueue_.splice(0));
+        this.group_.textureQueue_.push(...component.Group.textureQueue_.splice(0));
+        this.group_.vertexQueue_.push(...component.Group.vertexQueue_.splice(0));
+        this.group_.meshletIndicesQueue_.push(...component.Group.meshletIndicesQueue_.splice(0));
+        this.group_.indicesQueue_.push(...component.Group.indicesQueue_.splice(0));
+        this.group_.samplerQueue_.push(...component.Group.samplerQueue_.splice(0));
+        this.group_.instanceMeshletMapQueue_.push(...component.Group.instanceMeshletMapQueue_.splice(0));
     }
 
     /**
