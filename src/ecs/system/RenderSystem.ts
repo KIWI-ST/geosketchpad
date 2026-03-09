@@ -912,7 +912,7 @@ class RenderSystem extends BaseSystem {
      */
     private refreshRenderGraph = () => {
         // 使用debug meshlet vis component调试基础效果.
-        const { compiler, context, colorAttachment, depthStencilAttachment, maxMipmapCount } = this.scene_._state_renderer_;
+        const { compiler, context, colorAttachment, depthStencilAttachment } = this.scene_._state_renderer_;
         const { vertexSnippet, vertexBuffer } = this.res_.VertexBuffer!;
         const { fragmentDescSnippet } = this.res_.FragmentDescSnippet!;
         const { sceneDescSnippet, sceneDescBuffer } = this.res_.SceneDescBuffer!;
