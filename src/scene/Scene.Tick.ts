@@ -1,4 +1,4 @@
-import { Compiler, Context, type IContextOpts } from "@pipegpu/core";
+import { ColorAttachment, Compiler, Context, DepthStencilAttachment, type IContextOpts } from "@pipegpu/core";
 import { Scene } from './Scene'
 import { SceneBus } from "../bus/SceneBus";
 import { CameraSystem } from "../ecs/system/CameraSystem";
@@ -51,8 +51,11 @@ declare module './Scene' {
             count: number;
         };
         _state_renderer_: {
-            ctx3d: Context;
-            cpl3d: Compiler;
+            context: Context;
+            compiler: Compiler;
+            colorAttachment: ColorAttachment;
+            depthStencilAttachment: DepthStencilAttachment;
+            maxMipmapCount: number,
             lastTimeStamp: number;
             performance?: number;
         };
@@ -66,11 +69,11 @@ declare module './Scene' {
 }
 
 Scene.prototype.getContext3D = function (): Context {
-    return this._state_renderer_.ctx3d;
+    return this._state_renderer_.context;
 }
 
 Scene.prototype.getCompiler3D = function (): Compiler {
-    return this._state_renderer_.cpl3d;
+    return this._state_renderer_.compiler;
 }
 
 Scene.prototype.tick = async function (tickCount?: number): Promise<void> {
@@ -146,15 +149,39 @@ Scene.registerHook(
             selector: scene.Canvas,
             // requestFeatures: ['chromium-experimental-multi-draw-indirect']
         };
-        const context3d: Context = new Context(opts);
-        const compiler3d: Compiler = new Compiler(context3d);
+        const context: Context = new Context(opts);
+        const compiler: Compiler = new Compiler(context);
 
         // init renderer state.
+        // compiler, context, max mipmap count for depth texture. color attachment, depth stencil attachment.
         {
+            const surfaceTexture = compiler.createSurfaceTexture2D();
+            const surfaceColorAttachment = compiler.createColorAttachment({
+                texture: surfaceTexture,
+                blendFormat: 'opaque',
+                colorLoadStoreFormat: 'clearStore',   //clearStore
+                clearColor: [0.0, 0.0, 0.0, 0.0]
+            });
+            const depthTexture = compiler.createTexture2D({
+                width: context.getViewportWidth(),
+                height: context.getViewportHeight(),
+                textureFormat: context.getPreferredDepthTexuteFormat(),
+            });
+            const depthStencilAttachment = compiler.createDepthStencilAttachment({
+                texture: depthTexture,
+                depthCompareFunction: 'less-equal',   //    LESS
+                depthLoadStoreFormat: 'clearStore',   //    clearStore
+                depthReadOnly: false,
+                depthClearValue: 1.0,
+                // depthBiasSlopeScale: 100.0,
+            });
             scene._state_renderer_ = {
                 lastTimeStamp: 0,
-                ctx3d: context3d,
-                cpl3d: compiler3d,
+                context: context,
+                compiler: compiler,
+                colorAttachment: surfaceColorAttachment,
+                depthStencilAttachment: depthStencilAttachment,
+                maxMipmapCount: depthStencilAttachment.getTexture().MaxMipmapCount,
             };
         }
 
@@ -166,7 +193,7 @@ Scene.registerHook(
                 hdmfSystem: new HDMFSystem(scene),
                 renderSystem: new RenderSystem(scene),
             };
-            await scene._state_renderer_.ctx3d.init();
+            await scene._state_renderer_.context.init();
         }
 
         // tick.

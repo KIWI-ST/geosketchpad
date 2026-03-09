@@ -34,16 +34,26 @@ class HDMFCursor {
         this.hdmfDescCursor_ = v;
     }
 
-
     /**
      * @description
      *  indirect draw cursor.
+     *  indirect cursor stats with instance. 
+     * e.g:
+     * instance 0 has 6 meshlet, the map will be:
+     * 0-0: 0,
+     * 0-1: 1,
+     * ...
+     * 0-5: 6,
+     * instance 1 has 3 meshlet, the map increased:
+     * 1-0: 7,
+     * 1-1: 8,
+     * 1-2: 9
      */
     private indirectCursor_: number = 0;
-    public get IndirectCursor(): number {
+    public get IndexedIndirectCursor(): number {
         return this.indirectCursor_;
     }
-    public set IndirectCursor(v) {
+    public set IndexedIndirectCursor(v) {
         this.indirectCursor_ = v;
     }
 
@@ -117,12 +127,12 @@ class HDMFCursor {
     /**
      * @description
      */
-    private materialDescCursor_: number = 0;
-    public get MaterialDescCursor(): number {
-        return this.materialDescCursor_;
+    private deferredMaterialDescCursor_: number = 0;
+    public get DeferredMaterialDescCursor(): number {
+        return this.deferredMaterialDescCursor_;
     }
-    public set MaterialDescCursor(v: number) {
-        this.materialDescCursor_ = v;
+    public set DeferredMaterialDescCursor(v: number) {
+        this.deferredMaterialDescCursor_ = v;
     }
 
     /**
@@ -152,7 +162,6 @@ class HDMFCursor {
      */
     constructor() { }
 
-
     /**
      * @description update HardwareDenseMeshFriendlyCursor values.
      * @param v 
@@ -166,7 +175,7 @@ class HDMFCursor {
         this.indicesCursor_ = v.indicesCursor_;
         this.meshletDescCursor_ = v.meshletDescCursor_;
         this.meshletIndicesCursor_ = v.meshletIndicesCursor_;
-        this.materialDescCursor_ = v.materialDescCursor_;
+        this.deferredMaterialDescCursor_ = v.deferredMaterialDescCursor_;
         this.textureCursor_ = v.textureCursor_;
         this.instanceMeshletMapCursor_ = v.instanceMeshletMapCursor_;
     }
@@ -184,7 +193,7 @@ class HDMFCursor {
         this.indicesCursor_ += v.indicesCursor_;
         this.meshletDescCursor_ += v.meshletDescCursor_;
         this.meshletIndicesCursor_ += v.meshletIndicesCursor_;
-        this.materialDescCursor_ += v.materialDescCursor_;
+        this.deferredMaterialDescCursor_ += v.deferredMaterialDescCursor_;
         this.textureCursor_ += v.textureCursor_;
         this.instanceMeshletMapCursor_ += v.instanceMeshletMapCursor_;
     }
@@ -217,7 +226,7 @@ type HDMFQueueGroup = {
     /**
      * @description
      */
-    materialDescQueue_: MaterialDesc[];
+    deferredMaterialDescQueue_: MaterialDesc[];
 
     /**
      * @description
@@ -227,17 +236,24 @@ type HDMFQueueGroup = {
     /**
      * @description
      */
-    vertexQueue_: Float32Array[];
+    vertexQueue_: VertexDesc[];
+
+    /**
+     * @description
+     * mesh indices length not fixed.
+     * need store
+     */
+    meshletIndicesQueue_: MeshletIndicesDesc[];
 
     /**
      * @description
      */
-    meshletIndicesQueue_: Uint32Array[];
+    indexedIndirectQueue_: IndexedIndirectDesc[];
 
     /**
      * @description
      */
-    indicesQueue_: Uint32Array[];
+    indicesQueue_: IndicesDesc[];
 
     /**
      * @description
@@ -260,13 +276,14 @@ const initQueueGroup = (): HDMFQueueGroup => {
         instanceDescQueue_: [],
         meshDescQueue_: [],
         meshletDescQueue_: [],
-        materialDescQueue_: [],
+        deferredMaterialDescQueue_: [],
         textureQueue_: [],
         vertexQueue_: [],
         meshletIndicesQueue_: [],
         indicesQueue_: [],
         samplerQueue_: [],
         instanceMeshletMapQueue_: [],
+        indexedIndirectQueue_: [],
     }
 }
 
@@ -339,6 +356,68 @@ type InstanceDesc = {
      * @description
      */
     rt_scene_idx: number;
+};
+
+/**
+ * @description
+ * 记录当前Vertex数据串，运行时起步索引
+ */
+type VertexDesc = {
+    /**
+     * @description
+     */
+    vertex_data: Float32Array;
+
+    /**
+     * @description
+     */
+    rt_vertex_offset: number;
+}
+
+/**
+ * @description
+ */
+type MeshletIndicesDesc = {
+    /**
+     * @description
+     */
+    meshlet_indices_data: Uint32Array;
+
+    /**
+     * @description 
+     *  meshlet incidces 在全局的索引偏移，以uint32为单位，算byte需要乘以 sizeof(uint32)
+     */
+    rt_meshlet_indices_offset: number;
+};
+
+/**
+ * @description
+ */
+type IndicesDesc = {
+    /**
+     * @description
+     */
+    indices_data: Uint32Array;
+
+    /**
+     * @description
+     */
+    rt_indices_offset: number;
+};
+
+/**
+ * @description
+ */
+type IndexedIndirectDesc = {
+    /**
+     * @description
+     */
+    indexed_indirect_data: Uint32Array;
+
+    /**
+     * @description
+     */
+    rt_indexed_idirect_idx: number;
 };
 
 /**
@@ -539,7 +618,7 @@ type MaterialDesc = {
     * u32
     * 运行时材质索引
     */
-    rt_matrial_idx: number;
+    rt_material_idx: number;
 };
 
 /**
@@ -695,7 +774,15 @@ class HDMFComponent extends BaseComponent {
 
     /**
      * @description
-     * sampler 信息与其他信息不一样，sampler 属于可共享在所有
+     *  记录全局indirect指令偏移
+     *  全局数据加载完毕后，indirectCursor应与scene.json里记录的instance_spread_meshlet_count一致
+     */
+    private indirectCursor_?: number;
+
+    /**
+     * @description
+     * sampler 信息与其他信息不一样，sampler 属于可共享在所有 component中，且卸载 component 后不清理
+     * 性能优化：慎重设置Shared类型，只添加不移除。
      */
     public static SharedSamplerDataMap: Map<string, SamplerData> = new Map();
 
@@ -837,7 +924,7 @@ class HDMFComponent extends BaseComponent {
                     // assign texture map.
                     await this.loadMaterial(meshAsset.material);
                     // assign sampler map.
-                    this.loadSamplers(meshAsset.samplers);
+                    this.loadSamplers(meshAsset.sharedSamplers);
                 } else {
                     console.warn(`[W][enqueue] parseHMDFv2 error, missing pre request.`)
                 }
@@ -901,7 +988,7 @@ class HDMFComponent extends BaseComponent {
             phong_reflectivity: this.packScaler(v.phong.reflectivity),
             baked_ambient_occlusion: this.packScaler(v.baked.ambient_occlusion),
             baked_light_map: this.packScaler(v.baked.light_map),
-            rt_matrial_idx: v.rt_material_idx
+            rt_material_idx: v.rt_material_idx
         };
         const valid =
             q.pbr_base_color !== -1 &&
@@ -946,33 +1033,6 @@ class HDMFComponent extends BaseComponent {
             this.group_.sceneDescQueue_.push(q);
             this.sceneData_.needSync = false;
         }
-
-        // instance desc enqueue.
-        // enqueue instance and meshlet runtime index.
-        for (const [_k, v] of this.instanceDataMap_) {
-            if (!v.needSync) {
-                continue;
-            }
-            // wait mesh data load.
-            const meshData = this.meshDataMap_.get(v.mesh_uuid);
-            if (!meshData) {
-                continue;
-            }
-            // enqueue mapping of <instance id, meshlet>.
-            meshData.meshlets.forEach(meshletData => {
-                const q: Vec2n = vec2n.create(v.rt_instance_idx, meshletData.rt_meshlet_idx);
-                this.group_.instanceMeshletMapQueue_.push(q);
-            });
-            // enqueue instance desc.
-            const q: InstanceDesc = {
-                model: v.model,
-                rt_instance_idx: v.rt_instance_idx,
-                rt_mesh_idx: meshData.rt_mesh_idx,
-                rt_scene_idx: this.sceneData_.rt_hdmf_idx,
-            };
-            this.group_.instanceDescQueue_.push(q);
-            v.needSync = false;
-        }
         // sampler desc enqueue.
         for (const [_k, v] of HDMFComponent.SharedSamplerDataMap) {
             if (!v.needSync) {
@@ -1010,7 +1070,7 @@ class HDMFComponent extends BaseComponent {
             if (v.needSync) {
                 const q = this.packMaterialData2Desc(v);
                 if (q) {
-                    this.group_.materialDescQueue_.push(q);
+                    this.group_.deferredMaterialDescQueue_.push(q);
                     v.needSync = false;
                 } else {
                     console.warn(`[W] materialData convert to queue failed. materialData uuid: ${v.uuid}.`);
@@ -1018,52 +1078,121 @@ class HDMFComponent extends BaseComponent {
             }
         }
         // mesh-based enqueue
-        for (const [_k, v] of this.meshDataMap_) {
+        for (const [_k, mesh] of this.meshDataMap_) {
             // dep material runtime idx.
-            if (!v.needSync) {
+            if (!mesh.needSync) {
                 continue;
             }
             // TODO::
             // all material set as opaque.
             // has material, but material wait load.
-            const hasMaterial = v.material && v.material.uuid && v.material.uuid.trim().length > 0;
-            if (hasMaterial && !this.materialDataMap_.has(v.material.uuid)) {
+            const hasMaterial = mesh.material && mesh.material.uuid && mesh.material.uuid.trim().length > 0;
+            if (hasMaterial && !this.materialDataMap_.has(mesh.material.uuid)) {
                 continue;
             }
-            const rt_material_idx: number = hasMaterial ? this.materialDataMap_.get(v.material.uuid)!.rt_material_idx : ERROR_CODE;
-            const q: MeshDesc = {
-                bounding_sphere: v.bounding_sphere,
-                meshlet_count: v.meshlet_count,
-                rt_mesh_idx: v.rt_mesh_idx,
-                rt_vertex_offset: v.rt_vertex_offset,
-                rt_meshlet_offset: v.rt_meshlet_offset,
-                rt_material_idx: rt_material_idx
-            };
-            this.group_.meshDescQueue_.push(q);
-            // meshlet desc enqueue.
-            v.meshlets.forEach(meshlet => {
-                const q: MeshletDesc = {
-                    refined_bounding_sphere: meshlet.refined_bounding_sphere,
-                    self_bounding_sphere: meshlet.self_bounding_sphere,
-                    simplified_bounding_sphere: meshlet.simplified_bounding_sphere,
-                    refined_error: meshlet.refined_error,
-                    self_error: meshlet.self_error,
-                    simplified_error: meshlet.simplified_error,
-                    index_count: meshlet.index_count,
-                    rt_meshlet_idx: meshlet.rt_meshlet_idx,
-                    rt_mesh_idx: meshlet.rt_mesh_idx,               // check mesh uuid and runtime index.
-                    rt_index_offset: meshlet.rt_index_offset,
+            // enqueue mesh desc.
+            {
+                const rt_material_idx: number = hasMaterial ? this.materialDataMap_.get(mesh.material.uuid)!.rt_material_idx : ERROR_CODE;
+                const q: MeshDesc = {
+                    bounding_sphere: mesh.bounding_sphere,
+                    meshlet_count: mesh.meshlet_count,
+                    rt_mesh_idx: mesh.rt_mesh_idx,
+                    rt_vertex_offset: mesh.rt_vertex_offset,
+                    rt_meshlet_offset: mesh.rt_meshlet_offset,
+                    rt_material_idx: rt_material_idx
                 };
+                this.group_.meshDescQueue_.push(q);
+            }
+            // meshlet desc enqueue.
+            mesh.meshlets.forEach(meshlet => {
                 // meshlet desc enqueue.
-                this.group_.meshletDescQueue_.push(q);
+                {
+                    const q: MeshletDesc = {
+                        refined_bounding_sphere: meshlet.refined_bounding_sphere,
+                        self_bounding_sphere: meshlet.self_bounding_sphere,
+                        simplified_bounding_sphere: meshlet.simplified_bounding_sphere,
+                        refined_error: meshlet.refined_error,
+                        self_error: meshlet.self_error,
+                        simplified_error: meshlet.simplified_error,
+                        index_count: meshlet.index_count,
+                        rt_meshlet_idx: meshlet.rt_meshlet_idx,
+                        rt_mesh_idx: meshlet.rt_mesh_idx,               // check mesh uuid and runtime index.
+                        rt_index_offset: meshlet.rt_index_offset,
+                    };
+                    this.group_.meshletDescQueue_.push(q);
+                }
                 // meshlet indices enqueue.
-                this.group_.meshletIndicesQueue_.push(meshlet.indices);
+                {
+                    const q: MeshletIndicesDesc = {
+                        meshlet_indices_data: meshlet.indices,
+                        rt_meshlet_indices_offset: meshlet.rt_index_offset
+                    };
+                    this.group_.meshletIndicesQueue_.push(q);
+                }
             });
-            // vertex enqueue.
-            this.group_.vertexQueue_.push(v.vertex);
-            // indices enqueue.
-            this.group_.indicesQueue_.push(v.indices);
-            v.needSync = false;
+            // vertex data with offset.
+            {
+                const q: VertexDesc = {
+                    vertex_data: mesh.vertex,
+                    rt_vertex_offset: mesh.rt_vertex_offset,
+                };
+                // vertex enqueue.
+                this.group_.vertexQueue_.push(q);
+            }
+            // fallback indices
+            {
+                const q: IndicesDesc = {
+                    indices_data: mesh.indices,
+                    rt_indices_offset: mesh.rt_indices_offset,
+                };
+                this.group_.indicesQueue_.push(q);
+            }
+            // assign sync flag to false.
+            mesh.needSync = false;
+        }
+        // instance desc enqueue.
+        // enqueue instance and meshlet runtime index.
+        for (const [_k, instance] of this.instanceDataMap_) {
+            if (!instance.needSync) {
+                continue;
+            }
+            // wait mesh data load.
+            const mesh = this.meshDataMap_.get(instance.mesh_uuid);
+            if (!mesh) {
+                continue;
+            }
+            // enqueue mapping of <instance id, meshlet>.
+            mesh.meshlets.forEach(meshlet => {
+                // enqueue instance with meshlet map.
+                {
+                    const q: Vec2n = vec2n.create(instance.rt_instance_idx, meshlet.rt_meshlet_idx);
+                    this.group_.instanceMeshletMapQueue_.push(q);
+                }
+                // indexed indirect enqueue.
+                // index count, instance count, 
+                {
+                    const q: IndexedIndirectDesc = {
+                        indexed_indirect_data: new Uint32Array([
+                            meshlet.index_count,            // 要绘制的索引数量
+                            1,                              // 要绘制的实例数量
+                            meshlet.rt_index_offset,        // 索引缓冲区的起始偏移，索引数
+                            mesh.rt_vertex_offset,          // 顶点缓冲区的起始偏移，顶点数
+                            instance.rt_instance_idx
+                        ]),
+                        rt_indexed_idirect_idx: this.indirectCursor_!++,
+                    };
+                    this.group_.indexedIndirectQueue_.push(q);
+                }
+            });
+            // enqueue instance desc.
+            const q: InstanceDesc = {
+                model: instance.model,
+                rt_instance_idx: instance.rt_instance_idx,
+                rt_mesh_idx: mesh.rt_mesh_idx,
+                rt_scene_idx: this.sceneData_.rt_hdmf_idx,
+            };
+            this.group_.instanceDescQueue_.push(q);
+            instance.needSync = false;
         }
     }
 
@@ -1073,39 +1202,47 @@ class HDMFComponent extends BaseComponent {
      * - 另组织instance数据
      */
     private refreshMemory = (cursor: HDMFCursor): void => {
-        // instance runtime index.
-        let instanceDescCursor = cursor.InstanceDescCursor;
-        for (const [_k, v] of this.instanceDataMap_) {
-            v.rt_instance_idx = instanceDescCursor++;
-        }
         // texture runtime index.
         let textureCursor = cursor.TextureCursor;
-        for (const [_k, v] of this.textureDataMap_) {
-            v.rt_texture_idx = textureCursor++;
+        for (const [_k, texture] of this.textureDataMap_) {
+            texture.rt_texture_idx = textureCursor++;
         }
         // materials runtime index.
-        let materialDescCursor = cursor.MaterialDescCursor;
-        for (const [_k, v] of this.materialDataMap_) {
-            v.rt_material_idx = materialDescCursor++;
+        let materialDescCursor = cursor.DeferredMaterialDescCursor;
+        for (const [_k, material] of this.materialDataMap_) {
+            material.rt_material_idx = materialDescCursor++;
         }
         // mesh\vertex\meshlet\meshlet indices\ runtime index
         let meshCursor = cursor.MeshDescCursor;
         let vertexCursor = cursor.InstanceDescCursor;
         let meshletCursor = cursor.MeshletDescCursor;
+        let indicesCursor = cursor.IndicesCursor;
         let meshletIndicesCursor = cursor.MeshletIndicesCursor;
-        for (const [_key, v] of this.meshDataMap_) {
+        for (const [_k, mesh] of this.meshDataMap_) {
             // assign mesh index.
-            v.rt_mesh_idx = meshCursor++;
+            mesh.rt_mesh_idx = meshCursor++;
             // assign mesh vertex global offset.
-            vertexCursor += v.vertex_count;
-            v.rt_vertex_offset = vertexCursor;
+            vertexCursor += mesh.vertex_count;
+            mesh.rt_vertex_offset = vertexCursor;
             // assign meshlet global offset
-            v.meshlets.forEach(meshlet => {
+            mesh.meshlets.forEach(meshlet => {
                 meshletIndicesCursor += meshlet.index_count;
                 meshlet.rt_index_offset = meshletIndicesCursor;
-                meshlet.rt_mesh_idx = v.rt_mesh_idx;
+                meshlet.rt_mesh_idx = mesh.rt_mesh_idx;
                 meshlet.rt_meshlet_idx = meshletCursor++;
             });
+            // assign indices gloabl offset
+            mesh.rt_indices_offset += indicesCursor;
+            indicesCursor += mesh.indices.length;
+        }
+        // instance runtime index.
+        let instanceDescCursor = cursor.InstanceDescCursor;
+        for (const [_k, instance] of this.instanceDataMap_) {
+            instance.rt_instance_idx = instanceDescCursor++;
+        }
+        // indrect cursor, for indirect queue.
+        {
+            this.indirectCursor_ = cursor.IndicesCursor;
         }
         // enqueue GPU-Friendly data.
         this.enqueue();
@@ -1183,7 +1320,6 @@ class HDMFComponent extends BaseComponent {
 }
 
 export {
-    initQueueGroup,
     type HDMFQueueGroup,
     type SceneDesc,
     type InstanceDesc,
@@ -1192,6 +1328,10 @@ export {
     type MaterialDesc,
     type TextureDesc,
     type SamplerDesc,
+    type VertexDesc,
+    type IndicesDesc,
+    type MeshletIndicesDesc,
+    initQueueGroup,
     HDMFCursor,
     HDMFComponent,
 }

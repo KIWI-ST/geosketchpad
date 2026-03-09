@@ -91,14 +91,14 @@ class HDMFSystem extends BaseSystem {
             {
                 // hdmf runtime index.
                 initCur.HdmfSceneDescCursor = 1;
-                initCur.IndirectCursor = metaData.instance_spread_meshlet_count;
+                initCur.IndexedIndirectCursor = metaData.instance_spread_meshlet_count;
                 initCur.InstanceDescCursor = metaData.instance_count;
                 initCur.MeshDescCursor = metaData.mesh_count;
                 initCur.VertexCursor = metaData.vertex_count;
                 initCur.IndicesCursor = metaData.indices_count;
                 initCur.MeshletDescCursor = metaData.meshlet_count;
                 initCur.MeshletIndicesCursor = metaData.meshlet_indices_count;
-                initCur.MaterialDescCursor = metaData.material_count;
+                initCur.DeferredMaterialDescCursor = metaData.material_count;
                 initCur.TextureCursor = metaData.texture_count;
                 initCur.InstanceMeshletMapCursor = metaData.instance_spread_meshlet_count;
             }
@@ -133,7 +133,7 @@ class HDMFSystem extends BaseSystem {
         this.group_.instanceDescQueue_.push(...component.Group.instanceDescQueue_.splice(0));
         this.group_.meshDescQueue_.push(...component.Group.meshDescQueue_.splice(0));
         this.group_.meshletDescQueue_.push(...component.Group.meshletDescQueue_.splice(0));
-        this.group_.materialDescQueue_.push(...component.Group.materialDescQueue_.splice(0));
+        this.group_.deferredMaterialDescQueue_.push(...component.Group.deferredMaterialDescQueue_.splice(0));
         this.group_.textureQueue_.push(...component.Group.textureQueue_.splice(0));
         this.group_.vertexQueue_.push(...component.Group.vertexQueue_.splice(0));
         this.group_.meshletIndicesQueue_.push(...component.Group.meshletIndicesQueue_.splice(0));
