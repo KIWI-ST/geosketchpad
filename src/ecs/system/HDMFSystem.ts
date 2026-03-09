@@ -27,7 +27,7 @@ class HDMFSystem extends BaseSystem {
      * @description
      */
     public get Group(): HDMFQueueGroup {
-        return this.Group;
+        return this.group_;
     }
 
     /**

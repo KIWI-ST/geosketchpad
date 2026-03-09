@@ -169,9 +169,9 @@ class RenderSystem extends BaseSystem {
         if (this.res_.FragmentDescSnippet) {
             return;
         }
-        const { compiler: cpl3d } = this.scene_._state_renderer_;
+        const { compiler } = this.scene_._state_renderer_;
         this.res_.FragmentDescSnippet = {
-            fragmentDescSnippet: new FragmentDescSnippet(cpl3d),
+            fragmentDescSnippet: new FragmentDescSnippet(compiler),
         };
     }
 
@@ -821,7 +821,8 @@ class RenderSystem extends BaseSystem {
         if (this.res_.IndirectMaxDrawCountBuffer || !this.statsCursor_) {
             return;
         }
-        const bLen = 4;
+        // WARNING:: indirect usage buffer must align of 16.
+        const bLen = 16;
         const handler: BufferArrayHandle = () => {
             const details: BufferHandleDetail[] = [];
             details.push({
@@ -876,7 +877,7 @@ class RenderSystem extends BaseSystem {
         // init scene desc snippet.
         const compiler = this.scene_._state_renderer_.compiler;
         this.res_.IndirectMaxDrawCountBuffer = {
-            indirectMaxDrawCountBuffer: compiler.createIndirectBuffer({
+            indirectMaxDrawCountBuffer: compiler.createIndexedIndirectBuffer({
                 totalByteLength: bLen,
                 handler: handler
             }),
