@@ -50,6 +50,9 @@ type RES = {
     'MeshletIndicesBuffer'?: {
         meshletIndicesBuffer: IndexedStorageBuffer;
     };
+    /**
+     * @description
+     */
     'InstanceDescBuffer'?: {
         instanceDescSnippet: InstanceDescSnippet,
         instanceDescBuffer: StorageBuffer,
@@ -66,18 +69,30 @@ type RES = {
         instanceMeshletSnippet: StorageVec2U32Snippet;
         instanceMeshletBuffer: StorageBuffer;
     };
+    /**
+     * @description
+     */
     'SceneDescBuffer'?: {
         sceneDescSnippet: SceneDescSnippet;
         sceneDescBuffer: StorageBuffer;
     };
+    /**
+     * @description
+     */
     'MeshDescBuffer'?: {
         meshDescSnippet: MeshDescSnippet;
         meshDescBuffer: StorageBuffer;
     };
+    /**
+     * @description
+     */
     'MeshletDescBuffer'?: {
         meshletDescSnippet: MeshletDescSnippet;
         meshletDescBuffer: StorageBuffer;
     };
+    /**
+     * @description
+     */
     'DeferredMaterialDescBuffer'?: {
         deferredMaterialDescSnippet: DeferredMaterialDescSnippet;
         deferredMaterialDescBuffer: StorageBuffer;
@@ -89,6 +104,9 @@ type RES = {
     'IndirectMaxDrawCountBuffer'?: {
         indirectMaxDrawCountBuffer: IndirectBuffer;
     };
+    /**
+     * @description
+     */
     'IndexedIndirectBuffer'?: {
         indexedIndirectBuffer: IndexedIndirectBuffer;
     };
@@ -157,6 +175,9 @@ class RenderSystem extends BaseSystem {
         super(scene);
     }
 
+    /**
+     * TODO:: resize buffer, each buffer resize.
+     */
     private resizeBuffer = () => {
         throw new Error(`未实现component变化后buffer内存重分配, 当前无法动态设置component.`);
     };

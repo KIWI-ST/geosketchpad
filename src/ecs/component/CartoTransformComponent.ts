@@ -1,6 +1,6 @@
 import { type Ellipsoid, CartoPosition as CartoPosition } from "@pipegpu/geography";
-import { BaseComponent } from "../BaseComponent";
 import type { Vec3d } from "wgpu-matrix";
+import { BaseComponent } from "../BaseComponent";
 
 /**
  * @class CartoTransformComponent

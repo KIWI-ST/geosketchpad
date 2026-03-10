@@ -1,8 +1,8 @@
 /**
- * 
+ * @description
  */
 type ComponentTYPE =
-    `HardwareDenseMeshFriendlyComponent`
+    | `HardwareDenseMeshFriendlyComponent`
     | `OrbitCameraComponent`
     | `MaterialComponent`
     | `LightComponent`
@@ -14,14 +14,14 @@ type ComponentTYPE =
     ;
 
 /**
+ * @description
+ */
+let globalComponentIndex: number = 0;
+
+/**
  * @class BaseComponent
  */
 abstract class BaseComponent {
-    /**
-     * @description
-     */
-    private static IDX: number = 0;
-
     /**
      * @description
      */
@@ -38,6 +38,10 @@ abstract class BaseComponent {
      */
     protected uuid_: string;
 
+    /**
+     * @description
+     *  bindings entity unique id.
+     */
     protected entityUUID_?: string;
 
     /**
@@ -45,7 +49,7 @@ abstract class BaseComponent {
      */
     constructor(componentTYPE: ComponentTYPE) {
         this.componentTYPE_ = componentTYPE;
-        this.uuid_ = `_${this.componentTYPE_}_${BaseComponent.IDX++}_`;
+        this.uuid_ = `_${this.componentTYPE_}_${globalComponentIndex++}_`;
     }
 
     set EntityUUID(v: string) {
