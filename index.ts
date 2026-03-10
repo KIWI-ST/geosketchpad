@@ -46,7 +46,8 @@ import { HDMFComponent } from "./src/ecs/component/HDMFComponent";
         scene.setComponent(earthEntity, earthComponent);
 
         // hdmf component.
-        const hdmfComponent: HDMFComponent = new HDMFComponent(`http://127.0.0.1/service/DamagedHelmet/`, WGS84, new CartoPosition(116.397128, 39.917527));
+        const serviceURL = `http://127.0.0.1/service/DamagedHelmet/`;
+        const hdmfComponent: HDMFComponent = new HDMFComponent(serviceURL, WGS84, new CartoPosition(116.397128, 39.917527));
         await hdmfComponent.enable(true);
         scene.setComponent(earthEntity, hdmfComponent);
     }
