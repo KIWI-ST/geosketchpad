@@ -147,11 +147,18 @@ Scene.registerHook(
             height: scene.Height,
             devicePixelRatio: scene.DevicePixelRatio,
             selector: scene.Canvas,
-            // requestFeatures: ['chromium-experimental-multi-draw-indirect']
+            requestFeatures: [
+                'chromium-experimental-multi-draw-indirect',
+                'timestamp-query',
+                'indirect-first-instance',
+                'texture-compression-bc'
+                // 'chromium-experimental-multi-draw-indirect'
+            ]
         };
         const context: Context = new Context(opts);
-        const compiler: Compiler = new Compiler(context);
+        await context.init();
 
+        const compiler: Compiler = new Compiler(context);
         // init renderer state.
         // compiler, context, max mipmap count for depth texture. color attachment, depth stencil attachment.
         {
@@ -186,15 +193,12 @@ Scene.registerHook(
         }
 
         // state system.
-        {
-            scene._state_system_ = {
-                cameraSystem: new CameraSystem(scene),
-                ellipsoidSystem: new EllipsoidSystem(scene),
-                hdmfSystem: new HDMFSystem(scene),
-                renderSystem: new RenderSystem(scene),
-            };
-            await scene._state_renderer_.context.init();
-        }
+        scene._state_system_ = {
+            cameraSystem: new CameraSystem(scene),
+            ellipsoidSystem: new EllipsoidSystem(scene),
+            hdmfSystem: new HDMFSystem(scene),
+            renderSystem: new RenderSystem(scene),
+        };
 
         // tick.
         {

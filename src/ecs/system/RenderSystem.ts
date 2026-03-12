@@ -1,10 +1,40 @@
-import { DebugMeshletVisComponent, DebugSnippet, DeferredMaterialDescSnippet, FragmentDescSnippet, InstanceDescSnippet, MeshDescSnippet, MeshletDescSnippet, OrderedGraph, SceneDescSnippet, StorageVec2U32Snippet, VertexSnippet, ViewPlaneSnippet, ViewProjectionSnippet, ViewSnippet } from "@pipegpu/graph";
-import { Attributes, BaseHolder, IndexedIndirectBuffer, IndexedStorageBuffer, IndirectBuffer, RenderHolder, RenderProperty, StorageBuffer, UniformBuffer, Uniforms, VertexBuffer, type BufferArrayHandle, type BufferHandle, type BufferHandleDetail, type RenderHolderDesc } from "@pipegpu/core";
+import {
+    DebugMeshletVisComponent,
+    DebugSnippet,
+    DeferredMaterialDescSnippet,
+    FragmentDescSnippet,
+    InstanceDescSnippet,
+    MeshDescSnippet,
+    MeshletDescSnippet,
+    OrderedGraph,
+    SceneDescSnippet,
+    StorageVec2U32Snippet,
+    VertexSnippet,
+    ViewPlaneSnippet,
+    ViewProjectionSnippet,
+    ViewSnippet,
+} from "@pipegpu/graph";
+import {
+    type BufferArrayHandle,
+    type BufferHandle,
+    type BufferHandleDetail,
+    type RenderHolderDesc,
+    Attributes,
+    BaseHolder,
+    IndexedIndirectBuffer,
+    IndexedStorageBuffer,
+    IndirectBuffer,
+    RenderHolder,
+    RenderProperty,
+    StorageBuffer,
+    UniformBuffer,
+    Uniforms,
+} from "@pipegpu/core";
 import type { Camera } from "@pipegpu/camera";
+import { mat4d, vec3d, vec4d, type Mat4d, type Vec3d, type Vec4d } from "wgpu-matrix";
 import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
-import { HDMFCursor, type HDMFQueueGroup } from "../component/HDMFComponent";
-import { mat4d, vec3d, vec4d, type Mat4d, type Vec3d, type Vec4d } from "wgpu-matrix";
+import { HDMFMemoryCursor as Cursor, type HDMFQueueGroup } from "../component/HDMFComponent";
 
 /**
  * @description
@@ -165,7 +195,12 @@ class RenderSystem extends BaseSystem {
     /**
      * @description
      */
-    private statsCursor_?: HDMFCursor;
+    private statsCursor_?: Cursor;
+
+    /**
+     * @description
+     */
+    private debugMeshletHolder_?: RenderHolder;
 
     /**
      * 
@@ -179,7 +214,7 @@ class RenderSystem extends BaseSystem {
      * TODO:: resize buffer, each buffer resize.
      */
     private resizeBuffer = () => {
-        throw new Error(`未实现component变化后buffer内存重分配, 当前无法动态设置component.`);
+        // throw new Error(`未实现component变化后buffer内存重分配, 当前无法动态设置component.`);
     };
 
     /**
@@ -407,14 +442,257 @@ class RenderSystem extends BaseSystem {
     }
 
     /**
-     * @description
-     *  foreach mesh components, regroup mesh vertex data.
+     * @description foreach mesh components, regroup mesh vertex data.
+     * {
+     *    model: mat4x4<f32>,
+     *    rt_scene_idx: u32,
+     * }
      */
     private refreshSceneDescBuffer = (): void => {
         if (this.res_.SceneDescBuffer || !this.statsCursor_) {
             return;
         }
         const bLen = 80;
+        const handler: BufferArrayHandle = () => {
+            if (this.group_ && this.group_.sceneDescQueue_.length > 0) {
+                const details: BufferHandleDetail[] = [];
+                let q = this.group_.sceneDescQueue_.shift();
+                while (q) {
+                    const buf = new ArrayBuffer(bLen);
+                    const views = {
+                        model: new Float32Array(buf, 0, 16),
+                        rt_scene_idx: new Uint32Array(buf, 64, 1),
+                    };
+                    views.model.set(q.model);
+                    views.rt_scene_idx.set([q.rt_scene_idx]);
+                    details.push({
+                        byteLength: bLen,
+                        offset: bLen * q.rt_scene_idx,
+                        rawData: buf,
+                    });
+                    q = this.group_.sceneDescQueue_.shift();
+                }
+                return {
+                    rewrite: true,
+                    details: details,
+                }
+            } else {
+                return NoBufferArrayUpdateRequired;
+            }
+        };
+        // init scene desc snippet.
+        const compiler = this.scene_._state_renderer_.compiler;
+        this.res_.SceneDescBuffer = {
+            sceneDescSnippet: new SceneDescSnippet(compiler),
+            sceneDescBuffer: compiler.createStorageBuffer({
+                totalByteLength: bLen * this.statsCursor_.SceneDescCursor,
+                handler: handler,
+            }),
+        };
+    }
+
+    /**
+     * @description
+     *  {
+     *      model: mat4x4<f32>,
+     *      rt_mesh_idx: u32,       // mesh_id
+     *      rt_scene_idx: u32,      // component runtime index.
+     *      rt_instance_idx: u32,   // component runtime index.
+     *  };
+     */
+    private refreshInstanceDescBuffer = (): void => {
+        if (this.res_.InstanceDescBuffer || !this.statsCursor_) {
+            return;
+        }
+        const bLen = 80;
+        const handler: BufferArrayHandle = () => {
+            if (this.group_ && this.group_.instanceDescQueue_.length > 0) {
+                const details: BufferHandleDetail[] = [];
+                let q = this.group_.instanceDescQueue_.shift();
+                while (q) {
+                    const buf = new ArrayBuffer(bLen);
+                    const views = {
+                        model: new Float32Array(buf, 0, 16),
+                        rt_mesh_idx: new Uint32Array(buf, 64, 1),
+                        rt_scene_idx: new Uint32Array(buf, 68, 1),
+                        rt_instance_idx: new Uint32Array(buf, 72, 1),
+                    };
+                    views.model.set(q.model);
+                    views.rt_mesh_idx.set([q.rt_mesh_idx]);
+                    views.rt_scene_idx.set([q.rt_scene_idx]);
+                    views.rt_instance_idx.set([q.rt_instance_idx]);
+                    details.push({
+                        byteLength: bLen,
+                        offset: bLen * q.rt_instance_idx,
+                        rawData: buf,
+                    });
+                    q = this.group_.instanceDescQueue_.shift();
+                }
+                return {
+                    rewrite: true,
+                    details: details,
+                }
+            } else {
+                return NoBufferArrayUpdateRequired;
+            }
+        };
+        // init scene desc snippet.
+        const compiler = this.scene_._state_renderer_.compiler;
+        this.res_.InstanceDescBuffer = {
+            instanceDescSnippet: new InstanceDescSnippet(compiler),
+            instanceDescBuffer: compiler.createStorageBuffer({
+                totalByteLength: bLen * this.statsCursor_.InstanceDescCursor,
+                handler: handler,
+            }),
+        };
+    }
+
+    /**
+     * @description
+     *  {
+     *   bounding_sphere:vec4<f32>,  // sphere bounding。 
+     *   meshlet_count: u32,         // mesh包含的簇总数。
+     *   rt_vertex_offset: u32,      // vertex在全局的顶点偏移, 以顶点为单位。
+     *   rt_meshlet_offset: u32,     // 运行时meshlet在全局的偏移, 以为meshlet desc为单位。
+     *   rt_mesh_idx: u32,
+     *   rt_material_idx: u32,
+     *  };
+     */
+    private refreshMeshDescBuffer = (): void => {
+        if (this.res_.MeshDescBuffer || !this.statsCursor_) {
+            return;
+        }
+        const bLen = 48;
+        const handler: BufferArrayHandle = () => {
+            if (this.group_ && this.group_.meshDescQueue_.length > 0) {
+                const details: BufferHandleDetail[] = [];
+                let desc = this.group_.meshDescQueue_.shift();
+                while (desc) {
+                    const buffer = new ArrayBuffer(bLen);
+                    const views = {
+                        bounding_sphere: new Float32Array(buffer, 0, 4),
+                        meshlet_count: new Uint32Array(buffer, 16, 1),
+                        rt_vertex_offset: new Uint32Array(buffer, 20, 1),
+                        rt_meshlet_offset: new Uint32Array(buffer, 24, 1),
+                        rt_mesh_idx: new Uint32Array(buffer, 28, 1),
+                        rt_material_idx: new Uint32Array(buffer, 32, 1),
+                    };
+                    views.bounding_sphere.set(desc.bounding_sphere);
+                    views.meshlet_count.set([desc.meshlet_count]);
+                    views.rt_vertex_offset.set([desc.rt_vertex_offset]);
+                    views.rt_meshlet_offset.set([desc.rt_meshlet_offset]);
+                    views.rt_mesh_idx.set([desc.rt_mesh_idx]);
+                    views.rt_material_idx.set([desc.rt_material_idx]);
+                    details.push({
+                        byteLength: bLen,
+                        offset: bLen * desc.rt_mesh_idx,
+                        rawData: buffer,
+                    });
+                    desc = this.group_.meshDescQueue_.shift();
+                }
+                return {
+                    rewrite: true,
+                    details: details,
+                }
+            } else {
+                return NoBufferArrayUpdateRequired;
+            }
+        };
+        // init scene desc snippet.
+        const compiler = this.scene_._state_renderer_.compiler;
+        this.res_.MeshDescBuffer = {
+            meshDescSnippet: new MeshDescSnippet(compiler),
+            meshDescBuffer: compiler.createStorageBuffer({
+                totalByteLength: bLen * this.statsCursor_.MeshDescCursor,
+                handler: handler,
+            }),
+        };
+    }
+
+    /**
+     * @description
+     *  {
+     *       refined_bounding_sphere: vec4<f32>,
+     *       self_bounding_sphere: vec4<f32>,
+     *       simplified_bounding_sphere: vec4<f32>,
+     *       refined_error: f32,
+     *       self_error: f32,
+     *       simplified_error: f32,
+     *       index_count: u32,
+     *       rt_index_offset: u32,                   // 原名 index offset
+     *       rt_meshlet_idx: u32,                    // 原名 cluster_id
+     *       rt_mesh_idx: u32,
+     *   };
+     */
+    private refreshMeshletDescBuffer = (): void => {
+        if (this.res_.MeshletDescBuffer || !this.statsCursor_) {
+            return;
+        }
+        const bLen = 80;
+        const handler: BufferArrayHandle = () => {
+            if (this.group_ && this.group_.meshletDescQueue_.length > 0) {
+                const details: BufferHandleDetail[] = [];
+                let desc = this.group_.meshletDescQueue_.shift();
+                while (desc) {
+                    const buffer = new ArrayBuffer(bLen);
+                    const views = {
+                        refined_bounding_sphere: new Float32Array(buffer, 0, 4),
+                        self_bounding_sphere: new Float32Array(buffer, 16, 4),
+                        simplified_bounding_sphere: new Float32Array(buffer, 32, 4),
+                        refined_error: new Float32Array(buffer, 48, 1),
+                        self_error: new Float32Array(buffer, 52, 1),
+                        simplified_error: new Float32Array(buffer, 56, 1),
+                        index_count: new Uint32Array(buffer, 60, 1),
+                        rt_index_offset: new Uint32Array(buffer, 64, 1),
+                        rt_meshlet_idx: new Uint32Array(buffer, 68, 1),
+                        rt_mesh_idx: new Uint32Array(buffer, 72, 1),
+                    };
+                    views.refined_bounding_sphere.set(desc.refined_bounding_sphere);
+                    views.self_bounding_sphere.set(desc.self_bounding_sphere);
+                    views.simplified_bounding_sphere.set(desc.simplified_bounding_sphere);
+                    views.refined_error.set([desc.refined_error]);
+                    views.self_error.set([desc.self_error]);
+                    views.simplified_error.set([desc.simplified_error]);
+                    views.index_count.set([desc.index_count]);
+                    views.rt_index_offset.set([desc.rt_index_offset]);
+                    views.rt_meshlet_idx.set([desc.rt_meshlet_idx]);
+                    views.rt_mesh_idx.set([desc.rt_mesh_idx]);
+                    details.push({
+                        byteLength: bLen,
+                        offset: bLen * desc.rt_meshlet_idx,
+                        rawData: buffer,
+                    });
+                    desc = this.group_.meshletDescQueue_.shift();
+                }
+                return {
+                    rewrite: true,
+                    details: details,
+                }
+            } else {
+                return NoBufferArrayUpdateRequired;
+            }
+        };
+        // init scene desc snippet.
+        const compiler = this.scene_._state_renderer_.compiler;
+        this.res_.MeshletDescBuffer = {
+            meshletDescSnippet: new MeshletDescSnippet(compiler),
+            meshletDescBuffer: compiler.createStorageBuffer({
+                totalByteLength: bLen * this.statsCursor_.MeshletDescCursor,
+                handler: handler,
+            }),
+        };
+    }
+
+    /**
+     * @description
+     * strcut:
+     *  https://webgpufundamentals.org/webgpu/lessons/resources/wgsl-offset-computer.html#x=5d000001004003000000000000003d888b0237284ce7dce121b384fd72bd9a1ff901e6abc5860a8afa8f2d115b2c3db5f68fe6c6c203443b6876d5ef3eb715d57ae78a68be7bbcc0218c79e65f79be3a643e65e66b84c7669aa18e72087a65d4b61d56a74c074c7e444f78ea3a7de08f87710356b321f8cfd078dc37a9ad26595cbf2caaf3eb04887e8fa703157d05b24a90e4001b0ab3d029d7adde7585bd314b8716bd9023c098b4826b9fc3efc1f207767b983cd980db686ebe8d979bf5141cd7d2f8a7f0ed6aefc9675347fe0c0972fcfa69b445fc00766ff789f96a10fd45153850f00fc6e43fde634a2d99688b9a6f1e403e19f1aa85616d0950fbf6e7882a0360e95f9b527dd8438b7a93f015b6a18680675fb2c1826c2d19b1b261ba6a9afdb5f79b18ab651faee6811429294145ae924cf80330efffc43834f6eb10c0842bc38c8012f785611873d6a615633d208a2f90a6311354b2b01ffff51e06f0
+     */
+    private refreshDeferredMaterialDescBuffer = (): void => {
+        if (this.res_.DeferredMaterialDescBuffer || !this.statsCursor_) {
+            return;
+        }
+        const bLen = 88;
         const handler: BufferArrayHandle = () => {
             if (this.group_ && this.group_.deferredMaterialDescQueue_.length > 0) {
                 const details: BufferHandleDetail[] = [];
@@ -488,234 +766,6 @@ class RenderSystem extends BaseSystem {
             deferredMaterialDescSnippet: new DeferredMaterialDescSnippet(compiler),
             deferredMaterialDescBuffer: compiler.createStorageBuffer({
                 totalByteLength: bLen * this.statsCursor_.DeferredMaterialDescCursor,
-                handler: handler,
-            }),
-        };
-    }
-
-    private refreshInstanceDescBuffer = (): void => {
-        if (this.res_.InstanceDescBuffer || !this.statsCursor_) {
-            return;
-        }
-        const bLen = 80;
-        const handler: BufferArrayHandle = () => {
-            if (this.group_ && this.group_.instanceDescQueue_.length > 0) {
-                const details: BufferHandleDetail[] = [];
-                let q = this.group_.instanceDescQueue_.shift();
-                while (q) {
-                    const buf = new ArrayBuffer(bLen);
-                    const views = {
-                        model: new Float32Array(buf, 0, 16),
-                        rt_mesh_idx: new Uint32Array(buf, 64, 1),
-                        rt_scene_idx: new Uint32Array(buf, 68, 1),
-                        rt_instance_idx: new Uint32Array(buf, 72, 1),
-                    };
-                    views.model.set(q.model);
-                    views.rt_mesh_idx.set([q.rt_mesh_idx]);
-                    views.rt_scene_idx.set([q.rt_scene_idx]);
-                    views.rt_instance_idx.set([q.rt_instance_idx]);
-                    details.push({
-                        byteLength: bLen,
-                        offset: bLen * q.rt_instance_idx,
-                        rawData: buf,
-                    });
-                    q = this.group_.instanceDescQueue_.shift();
-                }
-                return {
-                    rewrite: true,
-                    details: details,
-                }
-            } else {
-                return NoBufferArrayUpdateRequired;
-            }
-        };
-        // init scene desc snippet.
-        const compiler = this.scene_._state_renderer_.compiler;
-        this.res_.InstanceDescBuffer = {
-            instanceDescSnippet: new InstanceDescSnippet(compiler),
-            instanceDescBuffer: compiler.createStorageBuffer({
-                totalByteLength: bLen * this.statsCursor_.InstanceDescCursor,
-                handler: handler,
-            }),
-        };
-    }
-
-    /**
-     * @description
-     */
-    private refreshMeshDescBuffer = (): void => {
-        if (this.res_.MeshDescBuffer || !this.statsCursor_) {
-            return;
-        }
-        const bLen = 48;
-        const handler: BufferArrayHandle = () => {
-            if (this.group_ && this.group_.meshDescQueue_.length > 0) {
-                const details: BufferHandleDetail[] = [];
-                let desc = this.group_.meshDescQueue_.shift();
-                while (desc) {
-                    const buffer = new ArrayBuffer(bLen);
-                    const views = {
-                        bounding_sphere: new Float32Array(buffer, 0, 4),
-                        meshlet_count: new Uint32Array(buffer, 16, 1),
-                        rt_vertex_offset: new Uint32Array(buffer, 20, 1),
-                        rt_meshlet_offset: new Uint32Array(buffer, 24, 1),
-                        rt_mesh_idx: new Uint32Array(buffer, 28, 1),
-                        rt_material_idx: new Uint32Array(buffer, 32, 1),
-                    };
-                    views.bounding_sphere.set(desc.bounding_sphere);
-                    views.meshlet_count.set([desc.meshlet_count]);
-                    views.rt_vertex_offset.set([desc.rt_vertex_offset]);
-                    views.rt_meshlet_offset.set([desc.rt_meshlet_offset]);
-                    views.rt_mesh_idx.set([desc.rt_mesh_idx]);
-                    views.rt_material_idx.set([desc.rt_material_idx]);
-                    details.push({
-                        byteLength: bLen,
-                        offset: bLen * desc.rt_mesh_idx,
-                        rawData: buffer,
-                    });
-                    desc = this.group_.meshDescQueue_.shift();
-                }
-                return {
-                    rewrite: true,
-                    details: details,
-                }
-            } else {
-                return NoBufferArrayUpdateRequired;
-            }
-        };
-        // init scene desc snippet.
-        const compiler = this.scene_._state_renderer_.compiler;
-        this.res_.MeshDescBuffer = {
-            meshDescSnippet: new MeshDescSnippet(compiler),
-            meshDescBuffer: compiler.createStorageBuffer({
-                totalByteLength: bLen * this.statsCursor_.MeshDescCursor,
-                handler: handler,
-            }),
-        };
-    }
-
-    /**
-     * @description
-     * @returns 
-     */
-    private refreshMeshletDescBuffer = (): void => {
-        if (this.res_.MeshletDescBuffer || !this.statsCursor_) {
-            return;
-        }
-        const bLen = 80;
-        const handler: BufferArrayHandle = () => {
-            if (this.group_ && this.group_.meshletDescQueue_.length > 0) {
-                const details: BufferHandleDetail[] = [];
-                let desc = this.group_.meshletDescQueue_.shift();
-                while (desc) {
-                    const buffer = new ArrayBuffer(bLen);
-                    const views = {
-                        refined_bounding_sphere: new Float32Array(buffer, 0, 4),
-                        self_bounding_sphere: new Float32Array(buffer, 16, 4),
-                        simplified_bounding_sphere: new Float32Array(buffer, 32, 4),
-                        refined_error: new Float32Array(buffer, 48, 1),
-                        self_error: new Float32Array(buffer, 52, 1),
-                        simplified_error: new Float32Array(buffer, 56, 1),
-                        index_count: new Uint32Array(buffer, 60, 1),
-                        rt_index_offset: new Uint32Array(buffer, 64, 1),
-                        rt_meshlet_idx: new Uint32Array(buffer, 68, 1),
-                        rt_mesh_idx: new Uint32Array(buffer, 72, 1),
-                    };
-                    views.refined_bounding_sphere.set(desc.refined_bounding_sphere);
-                    views.self_bounding_sphere.set(desc.self_bounding_sphere);
-                    views.simplified_bounding_sphere.set(desc.simplified_bounding_sphere);
-                    views.refined_error.set([desc.refined_error]);
-                    views.self_error.set([desc.self_error]);
-                    views.simplified_error.set([desc.simplified_error]);
-                    views.index_count.set([desc.index_count]);
-                    views.rt_index_offset.set([desc.rt_index_offset]);
-                    views.rt_meshlet_idx.set([desc.rt_meshlet_idx]);
-                    views.rt_mesh_idx.set([desc.rt_mesh_idx]);
-                    details.push({
-                        byteLength: bLen,
-                        offset: bLen * desc.rt_meshlet_idx,
-                        rawData: buffer,
-                    });
-                    desc = this.group_.meshletDescQueue_.shift();
-                }
-                return {
-                    rewrite: true,
-                    details: details,
-                }
-            } else {
-                return NoBufferArrayUpdateRequired;
-            }
-        };
-        // init scene desc snippet.
-        const compiler = this.scene_._state_renderer_.compiler;
-        this.res_.MeshletDescBuffer = {
-            meshletDescSnippet: new MeshletDescSnippet(compiler),
-            meshletDescBuffer: compiler.createStorageBuffer({
-                totalByteLength: bLen * this.statsCursor_.MeshletDescCursor,
-                handler: handler,
-            }),
-        };
-    }
-
-    /**
-     * @description
-     * strcut:
-     *  https://webgpufundamentals.org/webgpu/lessons/resources/wgsl-offset-computer.html#x=5d000001004003000000000000003d888b0237284ce7dce121b384fd72bd9a1ff901e6abc5860a8afa8f2d115b2c3db5f68fe6c6c203443b6876d5ef3eb715d57ae78a68be7bbcc0218c79e65f79be3a643e65e66b84c7669aa18e72087a65d4b61d56a74c074c7e444f78ea3a7de08f87710356b321f8cfd078dc37a9ad26595cbf2caaf3eb04887e8fa703157d05b24a90e4001b0ab3d029d7adde7585bd314b8716bd9023c098b4826b9fc3efc1f207767b983cd980db686ebe8d979bf5141cd7d2f8a7f0ed6aefc9675347fe0c0972fcfa69b445fc00766ff789f96a10fd45153850f00fc6e43fde634a2d99688b9a6f1e403e19f1aa85616d0950fbf6e7882a0360e95f9b527dd8438b7a93f015b6a18680675fb2c1826c2d19b1b261ba6a9afdb5f79b18ab651faee6811429294145ae924cf80330efffc43834f6eb10c0842bc38c8012f785611873d6a615633d208a2f90a6311354b2b01ffff51e06f0
-     */
-    private refreshDeferredMaterialDescBuffer = (): void => {
-        if (this.res_.DeferredMaterialDescBuffer || !this.statsCursor_) {
-            return;
-        }
-        const bLen = 88;
-        const handler: BufferArrayHandle = () => {
-            if (this.group_ && this.group_.meshletDescQueue_.length > 0) {
-                const details: BufferHandleDetail[] = [];
-                let desc = this.group_.meshletDescQueue_.shift();
-                while (desc) {
-                    const buffer = new ArrayBuffer(bLen);
-                    const views = {
-                        refined_bounding_sphere: new Float32Array(buffer, 0, 4),
-                        self_bounding_sphere: new Float32Array(buffer, 16, 4),
-                        simplified_bounding_sphere: new Float32Array(buffer, 32, 4),
-                        refined_error: new Float32Array(buffer, 48, 1),
-                        self_error: new Float32Array(buffer, 52, 1),
-                        simplified_error: new Float32Array(buffer, 56, 1),
-                        index_count: new Uint32Array(buffer, 60, 1),
-                        rt_index_offset: new Uint32Array(buffer, 64, 1),
-                        rt_meshlet_idx: new Uint32Array(buffer, 68, 1),
-                        rt_mesh_idx: new Uint32Array(buffer, 72, 1),
-                    };
-                    views.refined_bounding_sphere.set(desc.refined_bounding_sphere);
-                    views.self_bounding_sphere.set(desc.self_bounding_sphere);
-                    views.simplified_bounding_sphere.set(desc.simplified_bounding_sphere);
-                    views.refined_error.set([desc.refined_error]);
-                    views.self_error.set([desc.self_error]);
-                    views.simplified_error.set([desc.simplified_error]);
-                    views.index_count.set([desc.index_count]);
-                    views.rt_index_offset.set([desc.rt_index_offset]);
-                    views.rt_meshlet_idx.set([desc.rt_meshlet_idx]);
-                    views.rt_mesh_idx.set([desc.rt_mesh_idx]);
-                    details.push({
-                        byteLength: bLen,
-                        offset: bLen * desc.rt_meshlet_idx,
-                        rawData: buffer,
-                    });
-                    desc = this.group_.meshletDescQueue_.shift();
-                }
-                return {
-                    rewrite: true,
-                    details: details,
-                }
-            } else {
-                return NoBufferArrayUpdateRequired;
-            }
-        };
-        // init scene desc snippet.
-        const compiler = this.scene_._state_renderer_.compiler;
-        this.res_.MeshletDescBuffer = {
-            meshletDescSnippet: new MeshletDescSnippet(compiler),
-            meshletDescBuffer: compiler.createStorageBuffer({
-                totalByteLength: bLen * this.statsCursor_.MeshletDescCursor,
                 handler: handler,
             }),
         };
@@ -897,9 +947,9 @@ class RenderSystem extends BaseSystem {
         };
         // init scene desc snippet.
         const compiler = this.scene_._state_renderer_.compiler;
-        this.res_.IndirectMaxDrawCountBuffer = {
-            indirectMaxDrawCountBuffer: compiler.createIndexedIndirectBuffer({
-                totalByteLength: bLen,
+        this.res_.IndexedIndirectBuffer = {
+            indexedIndirectBuffer: compiler.createIndexedIndirectBuffer({
+                totalByteLength: bLen * this.statsCursor_.IndexedIndirectCursor,
                 handler: handler
             }),
         };
@@ -926,8 +976,6 @@ class RenderSystem extends BaseSystem {
         this.refreshIndexedIndirectBuffer();            // indexed indrect draw 绘制指令
     }
 
-    debugMeshletHolder_?: RenderHolder;
-
     /**
      * @description
      *  主管线
@@ -952,7 +1000,7 @@ class RenderSystem extends BaseSystem {
 
         // debug meshlet holder
         if (!this.debugMeshletHolder_) {
-            const debugMeshletVisSC = new DebugMeshletVisComponent(
+            const debugMeshletVisSC: DebugMeshletVisComponent = new DebugMeshletVisComponent(
                 context,
                 compiler,
                 {
@@ -1005,23 +1053,26 @@ class RenderSystem extends BaseSystem {
      * @description
      * @returns 
      */
-    public async update(camera: Camera, group: HDMFQueueGroup, statsCursor: HDMFCursor, cw: number, ch: number): Promise<void> {
+    public async update(camera: Camera, group: HDMFQueueGroup, statsCursor: Cursor, _cw: number, _ch: number): Promise<void> {
         // reference HDMF queue group.
         if (!this.group_) {
             this.group_ = group;
         }
         // check cursor, update/resize buffers.
         // TODO:: resize buffer.
-        if (!this.statsCursor_) {
-            this.statsCursor_ = new HDMFCursor();
+        if (!this.statsCursor_ && !statsCursor.isEmpty()) {
+            this.statsCursor_ = new Cursor();
             this.statsCursor_.copy(statsCursor);
         } else {
             // TOOD:: resize buffer.
             this.resizeBuffer();
         }
-        // 更新CPU-side内存分配, render graph资产注册、全局资产更新
-        this.refreshBuffer(camera);
-        this.refreshRenderGraph();
+        if (this.statsCursor_ && !this.statsCursor_.isEmpty()) {
+            // 更新CPU-side内存分配, render graph资产注册、全局资产更新
+            this.refreshBuffer(camera);
+            // 更新绘制指令
+            this.refreshRenderGraph();
+        }
     }
 }
 

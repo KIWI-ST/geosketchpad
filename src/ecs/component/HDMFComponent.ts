@@ -21,17 +21,17 @@ import { pack4xU8, unpack2xU8 } from "../../util/pack";
  * @description
  * @class HardwareDenseMeshFriendlyCursor
  */
-class HDMFCursor {
+class HDMFMemoryCursor {
     /**
      * @description
      *  hdmf descriptor cursor.
      */
-    private hdmfDescCursor_: number = 0;
-    public get HdmfSceneDescCursor(): number {
-        return this.hdmfDescCursor_;
+    private sceneDescCursor_: number = 0;
+    public get SceneDescCursor(): number {
+        return this.sceneDescCursor_;
     }
-    public set HdmfSceneDescCursor(v) {
-        this.hdmfDescCursor_ = v;
+    public set SceneDescCursor(v) {
+        this.sceneDescCursor_ = v;
     }
 
     /**
@@ -163,11 +163,29 @@ class HDMFCursor {
     constructor() { }
 
     /**
+     * @description
+     * @returns 
+     */
+    isEmpty = () => {
+        return this.sceneDescCursor_ === 0 &&
+            this.indirectCursor_ === 0 &&
+            this.instanceDescCursor_ === 0 &&
+            this.meshDescCursor_ === 0 &&
+            this.vertexCursor_ === 0 &&
+            this.indicesCursor_ === 0 &&
+            this.meshletDescCursor_ === 0 &&
+            this.meshletIndicesCursor_ === 0 &&
+            this.deferredMaterialDescCursor_ === 0 &&
+            this.textureCursor_ === 0 &&
+            this.instanceMeshletMapCursor_ === 0;
+    }
+
+    /**
      * @description update HardwareDenseMeshFriendlyCursor values.
      * @param v 
      */
-    copy = (v: HDMFCursor) => {
-        this.hdmfDescCursor_ = v.hdmfDescCursor_;
+    copy = (v: HDMFMemoryCursor) => {
+        this.sceneDescCursor_ = v.sceneDescCursor_;
         this.indirectCursor_ = v.indirectCursor_;
         this.instanceDescCursor_ = v.instanceDescCursor_;
         this.meshDescCursor_ = v.meshDescCursor_;
@@ -184,8 +202,8 @@ class HDMFCursor {
      * @description
      * @param v
      */
-    plus = (v: HDMFCursor) => {
-        this.hdmfDescCursor_ += v.hdmfDescCursor_;
+    plus = (v: HDMFMemoryCursor) => {
+        this.sceneDescCursor_ += v.sceneDescCursor_;
         this.indirectCursor_ += v.indirectCursor_;
         this.instanceDescCursor_ += v.instanceDescCursor_;
         this.meshDescCursor_ += v.meshDescCursor_;
@@ -327,7 +345,7 @@ type SceneDesc = {
     /**
      * @description
      */
-    rt_hdmf_idx: number;
+    rt_scene_idx: number;
 }
 
 /**
@@ -918,16 +936,12 @@ class HDMFComponent extends BaseComponent {
             const u8arr = await fetchHDMF(uri);
             if (u8arr) {
                 const meshAsset = parseHDMFv2(u8arr);
-                if (this.meshDataMap_.has(meshAsset.uuid)) {
-                    // assign mesh map.
-                    this.meshDataMap_.set(meshAsset.uuid, meshAsset);
-                    // assign texture map.
-                    await this.loadMaterial(meshAsset.material);
-                    // assign sampler map.
-                    this.loadSamplers(meshAsset.sharedSamplers);
-                } else {
-                    console.warn(`[W][enqueue] parseHMDFv2 error, missing pre request.`)
-                }
+                // assign mesh map.
+                this.meshDataMap_.set(meshAsset.uuid, meshAsset);
+                // assign texture map.
+                await this.loadMaterial(meshAsset.material);
+                // assign sampler map.
+                this.loadSamplers(meshAsset.sharedSamplers);
             } else {
                 this.rtMesh_.delete(mesh_uuid);
                 this.meshDataMap_.delete(instance.mesh_uuid);
@@ -1028,7 +1042,7 @@ class HDMFComponent extends BaseComponent {
         if (this.sceneData_.needSync) {
             const q: SceneDesc = {
                 model: this.sceneData_.model,
-                rt_hdmf_idx: this.sceneData_.rt_hdmf_idx
+                rt_scene_idx: this.sceneData_.rt_hdmf_idx
             };
             this.group_.sceneDescQueue_.push(q);
             this.sceneData_.needSync = false;
@@ -1201,7 +1215,7 @@ class HDMFComponent extends BaseComponent {
      * - 以mesh为单位组织vertex\indices\material\meshlet数据
      * - 另组织instance数据
      */
-    private refreshMemory = (cursor: HDMFCursor): void => {
+    private refreshMemory = (cursor: HDMFMemoryCursor): void => {
         // texture runtime index.
         let textureCursor = cursor.TextureCursor;
         for (const [_k, texture] of this.textureDataMap_) {
@@ -1241,9 +1255,9 @@ class HDMFComponent extends BaseComponent {
             instance.rt_instance_idx = instanceDescCursor++;
         }
         // indrect cursor, for indirect queue.
-        {
-            this.indirectCursor_ = cursor.IndicesCursor;
-        }
+        this.indirectCursor_ = cursor.IndicesCursor;
+        let rt_scene_idx = cursor.SceneDescCursor;
+        this.sceneData_.rt_hdmf_idx = rt_scene_idx++;
         // enqueue GPU-Friendly data.
         this.enqueue();
     }
@@ -1254,9 +1268,9 @@ class HDMFComponent extends BaseComponent {
      *  - request meta data.
      *  - for service.
      * @param _args 
-     * @param {Map<string, HDMFCursor>} allocatedMap mapping of component uuid and Allocated. 
+     * @param {Map<string, HDMFMemoryCursor>} allocatedMap mapping of component uuid and Allocated. 
      */
-    public async update(visualRevealTiles: QuadtreeTile[], LIMIT: number, allocatedMap: Map<string, HDMFCursor>): Promise<number> {
+    public async update(visualRevealTiles: QuadtreeTile[], LIMIT: number, allocatedMap: Map<string, HDMFMemoryCursor>): Promise<number> {
         // try allocate memory.
         // return while failed.
         if (!allocatedMap.has(this.UUID)) {
@@ -1332,6 +1346,6 @@ export {
     type IndicesDesc,
     type MeshletIndicesDesc,
     initQueueGroup,
-    HDMFCursor,
+    HDMFMemoryCursor,
     HDMFComponent,
 }

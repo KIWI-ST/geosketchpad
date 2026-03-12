@@ -27,11 +27,6 @@ class Scene {
     }
 
     /**
-     * index of entity
-     */
-    private entityIDX_: number = 0;
-
-    /**
      * canvas
      */
     protected canvas_: HTMLCanvasElement;

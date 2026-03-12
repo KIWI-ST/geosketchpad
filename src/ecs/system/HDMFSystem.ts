@@ -1,7 +1,7 @@
 import type { QuadtreeTile } from "@pipegpu/geography";
 import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
-import { HDMFComponent, HDMFCursor, initQueueGroup, type HDMFQueueGroup } from "../component/HDMFComponent";
+import { HDMFComponent, HDMFMemoryCursor, initQueueGroup, type HDMFQueueGroup } from "../component/HDMFComponent";
 import type { BaseComponent } from "../BaseComponent";
 
 
@@ -34,12 +34,12 @@ class HDMFSystem extends BaseSystem {
      * @description
      *  mapping of HDMFComponent UUID and HMDFComponent Cursor.
      */
-    private allocatedMap_: Map<string, HDMFCursor> = new Map();
+    private allocatedMap_: Map<string, HDMFMemoryCursor> = new Map();
 
     /**
      * @description
      */
-    public get AllocatedMap(): Map<string, HDMFCursor> {
+    public get AllocatedMap(): Map<string, HDMFMemoryCursor> {
         return this.allocatedMap_;
     }
 
@@ -47,8 +47,8 @@ class HDMFSystem extends BaseSystem {
      * @description 
      *  stats hdmf cursor.
      */
-    private statsCur_: HDMFCursor = new HDMFCursor();
-    public get StatsCursor(): HDMFCursor {
+    private statsCur_: HDMFMemoryCursor = new HDMFMemoryCursor();
+    public get StatsCursor(): HDMFMemoryCursor {
         return this.statsCur_;
     }
 
@@ -87,10 +87,10 @@ class HDMFSystem extends BaseSystem {
             if (!metaData) {
                 continue;
             }
-            const initCur: HDMFCursor = new HDMFCursor();
+            const initCur: HDMFMemoryCursor = new HDMFMemoryCursor();
             {
                 // hdmf runtime index.
-                initCur.HdmfSceneDescCursor = 1;
+                initCur.SceneDescCursor = 1;
                 initCur.IndexedIndirectCursor = metaData.instance_spread_meshlet_count;
                 initCur.InstanceDescCursor = metaData.instance_count;
                 initCur.MeshDescCursor = metaData.mesh_count;
@@ -107,10 +107,10 @@ class HDMFSystem extends BaseSystem {
         }
         // update alloacted map
         // cursor for hdmf allocated.
-        const globalCur: HDMFCursor = new HDMFCursor();
+        const globalCur: HDMFMemoryCursor = new HDMFMemoryCursor();
         for (const [_k, v] of this.allocatedMap_) {
             // copy cursor.
-            const copyedCur = new HDMFCursor();
+            const copyedCur = new HDMFMemoryCursor();
             copyedCur.copy(v);
             // copy global cur to v.
             v.copy(globalCur);
