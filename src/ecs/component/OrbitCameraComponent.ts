@@ -1,5 +1,5 @@
 import { Camera } from '@pipegpu/camera';
-import { mat4d, vec3d, type Mat4d, type Vec3d } from 'wgpu-matrix';
+import { vec3d, type Mat4d, type Vec3d } from 'wgpu-matrix';
 
 import { BaseComponent } from '../BaseComponent';
 import { DOMBus, type DOMBusContext } from '../../bus/DOMBus';
@@ -44,11 +44,6 @@ class OrbitCameraComponent extends BaseComponent {
     private isMainCamera_: boolean = false;
 
     /**
-     * 
-     */
-    private enableRTE_: boolean = false;
-
-    /**
      * camrea position in world space.
      * e.g 
      * (100, 200, 300);
@@ -82,14 +77,6 @@ class OrbitCameraComponent extends BaseComponent {
             radius: 0,
             sphericalPostion: vec3d.clone(this.camera_.Position),
         };
-    }
-
-    /**
-     * 
-     * @param b 
-     */
-    public enableRTE(b: boolean): void {
-        this.enableRTE_ = b;
     }
 
     /**
@@ -277,15 +264,7 @@ class OrbitCameraComponent extends BaseComponent {
     }
 
     get ViewMatrix(): Mat4d {
-        const matrix: Mat4d = mat4d.clone(this.camera_.ViewMatrix);
-        if (this.enableRTE_) {
-            matrix[12] = 0;
-            matrix[13] = 0;
-            matrix[14] = 0;
-            return matrix;
-        } else {
-            return this.camera_.ViewMatrix;
-        }
+        return this.camera_.ViewMatrix;
     }
 
     get ViewProjectionMatrix(): Mat4d {
