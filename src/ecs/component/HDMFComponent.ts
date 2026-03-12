@@ -1,4 +1,4 @@
-import { mat4d, vec2n, type Mat4, type Vec2n, type Vec4 } from "wgpu-matrix";
+import { mat4d, vec2n, type Mat4, type Mat4d, type Vec2n, type Vec4 } from "wgpu-matrix";
 import { CartoPosition, Ellipsoid, QuadtreeTile } from "@pipegpu/geography";
 import {
     fetchHDMF,
@@ -325,12 +325,12 @@ type SceneData = {
     /**
      * @description
      */
-    model: Mat4;
+    model: Mat4d;
 
     /**
      * @description
      */
-    rt_hdmf_idx: number;
+    rt_scene_idx: number;
 };
 
 /**
@@ -340,7 +340,7 @@ type SceneDesc = {
     /**
      * @description
      */
-    model: Mat4;
+    model: Mat4d;
 
     /**
      * @description
@@ -822,7 +822,7 @@ class HDMFComponent extends BaseComponent {
         this.rootDir_ = rootDir;
         this.positionCarto_ = positionCarto;
         this.ellipsoid_ = ellipsoid;
-        this.sceneData_ = { needSync: true, model: mat4d.identity(), rt_hdmf_idx: ERROR_CODE };
+        this.sceneData_ = { needSync: true, model: mat4d.identity(), rt_scene_idx: ERROR_CODE };
         this.group_ = initQueueGroup();
     }
 
@@ -1042,7 +1042,7 @@ class HDMFComponent extends BaseComponent {
         if (this.sceneData_.needSync) {
             const q: SceneDesc = {
                 model: this.sceneData_.model,
-                rt_scene_idx: this.sceneData_.rt_hdmf_idx
+                rt_scene_idx: this.sceneData_.rt_scene_idx
             };
             this.group_.sceneDescQueue_.push(q);
             this.sceneData_.needSync = false;
@@ -1203,7 +1203,7 @@ class HDMFComponent extends BaseComponent {
                 model: instance.model,
                 rt_instance_idx: instance.rt_instance_idx,
                 rt_mesh_idx: mesh.rt_mesh_idx,
-                rt_scene_idx: this.sceneData_.rt_hdmf_idx,
+                rt_scene_idx: this.sceneData_.rt_scene_idx,
             };
             this.group_.instanceDescQueue_.push(q);
             instance.needSync = false;
@@ -1257,7 +1257,11 @@ class HDMFComponent extends BaseComponent {
         // indrect cursor, for indirect queue.
         this.indirectCursor_ = cursor.IndicesCursor;
         let rt_scene_idx = cursor.SceneDescCursor;
-        this.sceneData_.rt_hdmf_idx = rt_scene_idx++;
+        {
+            this.sceneData_.needSync = true;
+            this.sceneData_.rt_scene_idx = rt_scene_idx++;
+            this.sceneData_.model = this.ellipsoid_.eastNorthUpToFixedFrame(this.positionCarto_);
+        }
         // enqueue GPU-Friendly data.
         this.enqueue();
     }
@@ -1277,7 +1281,6 @@ class HDMFComponent extends BaseComponent {
             console.warn(`[W][update] allocate memory failed, component update skipped.`);
             return LIMIT;
         }
-
         // do enqueue, cost compute limit.
         let item = this.waitRequestInstanceQueue_.shift();
         while (LIMIT > 0 && item) {
@@ -1285,12 +1288,12 @@ class HDMFComponent extends BaseComponent {
             LIMIT--;
             item = this.waitRequestInstanceQueue_.shift();
         }
-
+        // remain compute limit.
+        this.refreshMemory(allocatedMap.get(this.UUID)!);
         // instance 未处理完，取消处理等待下次调用
         if (this.waitRequestInstanceQueue_.length > 0 || this.loadingStatus_ !== 'done' || !visualRevealTiles || visualRevealTiles.length === 0) {
             return LIMIT;
         }
-
         // 预处理，过滤已加载/无需加载/服务端不存在的瓦片，避免重复请求
         const validTiles = visualRevealTiles.filter(tile => {
             if (!tile) {
@@ -1299,12 +1302,10 @@ class HDMFComponent extends BaseComponent {
             const tileKey = `${tile?.X}_${tile?.Y}_${tile?.Level}.json`;
             return !this.rtTile_.has(tileKey) && this.serverTileset_.has(tileKey);
         });
-
         // 无需处理
         if (validTiles.length === 0) {
             return LIMIT;
         }
-
         // TODO:: 优化性能，无需加载的json可终止请求
         this.loadingStatus_ = 'pending';
         for (const tile of validTiles) {
@@ -1326,9 +1327,6 @@ class HDMFComponent extends BaseComponent {
             this.rtTile_.add(tileKey);
         }
         this.loadingStatus_ = 'done';
-
-        // remain compute limit.
-        this.refreshMemory(allocatedMap.get(this.UUID)!);
         return LIMIT;
     }
 }

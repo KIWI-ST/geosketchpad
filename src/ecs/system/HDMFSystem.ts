@@ -3,7 +3,7 @@ import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
 import { HDMFComponent, HDMFMemoryCursor, initQueueGroup, type HDMFQueueGroup } from "../component/HDMFComponent";
 import type { BaseComponent } from "../BaseComponent";
-
+import type { Camera } from "@pipegpu/camera/src/camera/Camera";
 
 /**
  * @class HDMF, HardwareDenseMeshFriendly
@@ -61,7 +61,8 @@ class HDMFSystem extends BaseSystem {
     }
 
     /**
-     * 分配/更新 共享内存数据和运行时索引
+     * @description
+     *  分配/更新 共享内存数据和运行时索引
      */
     private refreshSharedMemory = () => {
         let samplerCursor = 0;

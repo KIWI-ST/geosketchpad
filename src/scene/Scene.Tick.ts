@@ -139,6 +139,13 @@ Scene.prototype.render = async function (_frameID: number, timeStamp: number): P
     this._state_renderer_.lastTimeStamp = timeStamp;
 }
 
+/**
+ * @description
+ * register
+ * - render context
+ * - render compiler
+ * - render
+ */
 Scene.registerHook(
     async (scene: Scene) => {
         // init context3d opts.
@@ -167,7 +174,7 @@ Scene.registerHook(
                 texture: surfaceTexture,
                 blendFormat: 'opaque',
                 colorLoadStoreFormat: 'clearStore',   //clearStore
-                clearColor: [0.0, 0.0, 0.0, 0.0]
+                clearColor: [0.0, 0.0, 0.0, 1.0]
             });
             const depthTexture = compiler.createTexture2D({
                 width: context.getViewportWidth(),

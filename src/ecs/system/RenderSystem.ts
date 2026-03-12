@@ -155,6 +155,13 @@ const getViewRTE = (viewMat: Mat4d): Mat4d => {
     return rte;
 };
 
+const getSceneRTE = (sceneMatrix: Mat4d, cameraPositionWS: Vec3d): Mat4d => {
+    sceneMatrix[12] -= cameraPositionWS[0];
+    sceneMatrix[13] -= cameraPositionWS[1];
+    sceneMatrix[14] -= cameraPositionWS[2];
+    return sceneMatrix;
+}
+
 /**
  * 
  */
@@ -201,6 +208,8 @@ class RenderSystem extends BaseSystem {
      * @description
      */
     private debugMeshletHolder_?: RenderHolder;
+
+    private enableRTE_?: boolean = true;
 
     /**
      * 
@@ -249,7 +258,7 @@ class RenderSystem extends BaseSystem {
                 view: new Float32Array(buffer, 64, 16),
             };
             // TODO:: float64 convert to float32 array.
-            const viewRTE = getViewRTE(this.camera_!.ViewMatrix);
+            const viewRTE = this.enableRTE_ ? getViewRTE(this.camera_!.ViewMatrix) : this.camera_!.ViewMatrix;
             bufferViews.view.set(new Float32Array(viewRTE));
             bufferViews.projection.set(new Float32Array(this.camera_!.ProjectionMatrix));
             return {
@@ -463,7 +472,8 @@ class RenderSystem extends BaseSystem {
                         model: new Float32Array(buf, 0, 16),
                         rt_scene_idx: new Uint32Array(buf, 64, 1),
                     };
-                    views.model.set(q.model);
+                    const sceneMatrixRET = this.enableRTE_ ? getSceneRTE(q.model, this.camera_!.Position) : q.model;
+                    views.model.set(sceneMatrixRET);
                     views.rt_scene_idx.set([q.rt_scene_idx]);
                     details.push({
                         byteLength: bLen,
@@ -782,14 +792,14 @@ class RenderSystem extends BaseSystem {
         const handler: BufferArrayHandle = () => {
             if (this.group_ && this.group_.vertexQueue_.length > 0) {
                 const details: BufferHandleDetail[] = [];
-                let desc = this.group_.vertexQueue_.shift();
-                while (desc) {
+                let q = this.group_.vertexQueue_.shift();
+                while (q) {
                     details.push({
                         byteLength: bLen,
-                        offset: desc.rt_vertex_offset * bLen,
-                        rawData: desc.vertex_data,
+                        offset: q.rt_vertex_offset * bLen,
+                        rawData: q.vertex_data,
                     });
-                    desc = this.group_.vertexQueue_.shift();
+                    q = this.group_.vertexQueue_.shift();
                 }
                 return {
                     rewrite: true,
@@ -822,14 +832,14 @@ class RenderSystem extends BaseSystem {
         const handler: BufferArrayHandle = () => {
             if (this.group_ && this.group_.indicesQueue_.length > 0) {
                 const details: BufferHandleDetail[] = [];
-                let desc = this.group_.indicesQueue_.shift();
-                while (desc) {
+                let q = this.group_.indicesQueue_.shift();
+                while (q) {
                     details.push({
                         byteLength: bLen,
-                        offset: desc.rt_indices_offset * bLen,
-                        rawData: desc.indices_data,
+                        offset: q.rt_indices_offset * bLen,
+                        rawData: q.indices_data,
                     });
-                    desc = this.group_.indicesQueue_.shift();
+                    q = this.group_.indicesQueue_.shift();
                 }
                 return {
                     rewrite: true,
@@ -980,7 +990,7 @@ class RenderSystem extends BaseSystem {
      * @description
      *  主管线
      */
-    private refreshRenderGraph = () => {
+    private buildRenderGraph = () => {
         // 使用debug meshlet vis component调试基础效果.
         const { compiler, context, colorAttachment, depthStencilAttachment } = this.scene_._state_renderer_;
         const { vertexSnippet, vertexBuffer } = this.res_.VertexBuffer!;
@@ -1038,6 +1048,7 @@ class RenderSystem extends BaseSystem {
             d.uniforms.assign(vertexSnippet.getVariableName(), vertexBuffer);
             d.uniforms.assign(viewProjectionSnippet.getVariableName(), viewProjectionBuffer);
             d.uniforms.assign(viewSnippet.getVariableName(), viewBuffer);
+
             this.debugMeshletHolder_ = compiler.compileRenderHolder(d);
         }
 
@@ -1071,7 +1082,7 @@ class RenderSystem extends BaseSystem {
             // 更新CPU-side内存分配, render graph资产注册、全局资产更新
             this.refreshBuffer(camera);
             // 更新绘制指令
-            this.refreshRenderGraph();
+            this.buildRenderGraph();
         }
     }
 }

@@ -233,7 +233,6 @@ class OrbitCameraComponent extends BaseComponent {
         if (c.mouseStatus[0] && this._state_.lastMouseX > 0 && this._state_.lastMouseY > 0) {
             const ra = -(mousex - this._state_.lastMouseX) * this._state_.rotateFactor;
             const rb = (mousey - this._state_.lastMouseY) * this._state_.rotateFactor;
-            console.log(`${ra} - ${rb}`);
             this._state_.theta += ra * Math.PI / 180;
             this._state_.phi -= rb * Math.PI / 180;
             this.RefreshCamera();
