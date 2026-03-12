@@ -97,7 +97,7 @@ class EllipsoidComponent extends BaseComponent {
         }
         const zeroLevelQuadtreeTiles = this.zeroLevelTiles_;
         const pickedZeroLevelQuadtreeTiles: QuadtreeTile[] = [];
-        const geodeticCoordinate = this.ellipsoid_.wsPosition2cartoPosition(position);
+        const geodeticCoordinate = this.ellipsoid_.positionWS2PositionCT(position);
         zeroLevelQuadtreeTiles?.forEach((quadtreeTile) => {
             quadtreeTile.Boundary.Contain(geodeticCoordinate) ? pickedZeroLevelQuadtreeTiles.push(quadtreeTile) : null;
         });
@@ -116,7 +116,7 @@ class EllipsoidComponent extends BaseComponent {
             maxGeometricError = this.geometricErrors_[level],
             sseDenominator = camera.fetchSseDenominator(),
             height = ch;
-        const positionCartographic = this.ellipsoid_.wsPosition2cartoPosition(camera.Position);
+        const positionCartographic = this.ellipsoid_.positionWS2PositionCT(camera.Position);
         const distance = positionCartographic.Altitude;
         return (maxGeometricError * height!) / (distance * sseDenominator!);
     }
@@ -141,7 +141,7 @@ class EllipsoidComponent extends BaseComponent {
             quadtreeTile.SphereBoundary[2]
         );
         //quadtreeTile.Boundary.Center.Longitude
-        const boundary = this.ellipsoid_.cartoPosition2wsPostion(tileGeoCoord);
+        const boundary = this.ellipsoid_.positionCT2postionWS(tileGeoCoord);
         const a: number = camera.Position[0] - boundary[0];
         const b: number = camera.Position[1] - boundary[1];
         const c: number = camera.Position[2] - boundary[2];
@@ -174,7 +174,7 @@ class EllipsoidComponent extends BaseComponent {
         let level = 0;
         const liter = (quadtreeTile: QuadtreeTile) => {
             const distance = this.computeTileDistanceToCamera(quadtreeTile, camera);
-            const positionCartographic = this.ellipsoid_.wsPosition2cartoPosition(camera.Position);
+            const positionCartographic = this.ellipsoid_.positionWS2PositionCT(camera.Position);
             if (distance > positionCartographic.Altitude * 20.0) {
                 return;
             }

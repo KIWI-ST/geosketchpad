@@ -209,6 +209,10 @@ class RenderSystem extends BaseSystem {
      */
     private debugMeshletHolder_?: RenderHolder;
 
+    /**
+     * @description
+     *  support large scale scene. enable RTE as default.
+     */
     private enableRTE_?: boolean = true;
 
     /**
@@ -249,36 +253,34 @@ class RenderSystem extends BaseSystem {
             return;
         }
         const bLen = 32 * 4;
-        const compiler = this.scene_._state_renderer_.compiler;
-        const viewProjectionSnippet = new ViewProjectionSnippet(compiler);
         const handler: BufferHandle = () => {
             const buffer = new ArrayBuffer(128);
             const bufferViews = {
                 projection: new Float32Array(buffer, 0, 16),
                 view: new Float32Array(buffer, 64, 16),
             };
+            bufferViews.projection.set(this.camera_!.ProjectionMatrix);
             // TODO:: float64 convert to float32 array.
             const viewRTE = this.enableRTE_ ? getViewRTE(this.camera_!.ViewMatrix) : this.camera_!.ViewMatrix;
-            bufferViews.view.set(new Float32Array(viewRTE));
-            bufferViews.projection.set(new Float32Array(this.camera_!.ProjectionMatrix));
+            bufferViews.view.set(viewRTE);
             return {
                 rewrite: true,
                 detail: {
-                    offset: 0,
                     byteLength: bLen,
+                    offset: 0,
                     rawData: buffer,
                 }
             }
         };
-        const viewProjectionBuffer = compiler.createUniformBuffer({
-            totalByteLength: bLen,
-            handler: handler
-        });
+        const compiler = this.scene_._state_renderer_.compiler;
         // register to graph resoruce.
         this.res_.ViewProjectionBuffer = {
-            viewProjectionSnippet: viewProjectionSnippet,
-            viewProjectionBuffer: viewProjectionBuffer,
-        }
+            viewProjectionSnippet: new ViewProjectionSnippet(compiler),
+            viewProjectionBuffer: compiler.createUniformBuffer({
+                totalByteLength: bLen,
+                handler: handler
+            }),
+        };
     }
 
     /**
@@ -388,8 +390,8 @@ class RenderSystem extends BaseSystem {
             return {
                 rewrite: true,
                 detail: {
-                    offset: 0,
                     byteLength: bLen,
+                    offset: 0,
                     rawData: rawDataf32
                 }
             }
@@ -433,20 +435,19 @@ class RenderSystem extends BaseSystem {
             return {
                 rewrite: true,
                 detail: {
-                    offset: 0,
                     byteLength: bLen,
+                    offset: 0,
                     rawData: rawDataF32,
                 }
             }
         };
         const compiler = this.scene_._state_renderer_.compiler;
-        const viewBuffer = compiler.createUniformBuffer({
-            totalByteLength: bLen,
-            handler: handler,
-        })
         this.res_.ViewBuffer = {
             viewSnippet: new ViewSnippet(compiler),
-            viewBuffer: viewBuffer,
+            viewBuffer: compiler.createUniformBuffer({
+                totalByteLength: bLen,
+                handler: handler,
+            }),
         };
     }
 
@@ -527,6 +528,7 @@ class RenderSystem extends BaseSystem {
                         rt_scene_idx: new Uint32Array(buf, 68, 1),
                         rt_instance_idx: new Uint32Array(buf, 72, 1),
                     };
+                    // views.model.set(mat4d.scale(q.model, vec3d.create(100, 100, 100)));
                     views.model.set(q.model);
                     views.rt_mesh_idx.set([q.rt_mesh_idx]);
                     views.rt_scene_idx.set([q.rt_scene_idx]);
@@ -830,16 +832,16 @@ class RenderSystem extends BaseSystem {
         }
         const bLen = 4;
         const handler: BufferArrayHandle = () => {
-            if (this.group_ && this.group_.indicesQueue_.length > 0) {
+            if (this.group_ && this.group_.fallbackIndicesQueue_.length > 0) {
                 const details: BufferHandleDetail[] = [];
-                let q = this.group_.indicesQueue_.shift();
+                let q = this.group_.fallbackIndicesQueue_.shift();
                 while (q) {
                     details.push({
                         byteLength: bLen,
                         offset: q.rt_indices_offset * bLen,
                         rawData: q.indices_data,
                     });
-                    q = this.group_.indicesQueue_.shift();
+                    q = this.group_.fallbackIndicesQueue_.shift();
                 }
                 return {
                     rewrite: true,
@@ -990,7 +992,7 @@ class RenderSystem extends BaseSystem {
      * @description
      *  主管线
      */
-    private buildRenderGraph = () => {
+    private buildRenderGraph = async () => {
         // 使用debug meshlet vis component调试基础效果.
         const { compiler, context, colorAttachment, depthStencilAttachment } = this.scene_._state_renderer_;
         const { vertexSnippet, vertexBuffer } = this.res_.VertexBuffer!;
@@ -1057,7 +1059,7 @@ class RenderSystem extends BaseSystem {
             holders.push(this.debugMeshletHolder_);
         }
         this.frameGraph_.append(holders);
-        this.frameGraph_.build();
+        await this.frameGraph_.build();
     }
 
     /**
@@ -1082,7 +1084,7 @@ class RenderSystem extends BaseSystem {
             // 更新CPU-side内存分配, render graph资产注册、全局资产更新
             this.refreshBuffer(camera);
             // 更新绘制指令
-            this.buildRenderGraph();
+            await this.buildRenderGraph();
         }
     }
 }

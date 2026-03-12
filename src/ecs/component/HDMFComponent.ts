@@ -24,6 +24,12 @@ import { pack4xU8, unpack2xU8 } from "../../util/pack";
 class HDMFMemoryCursor {
     /**
      * @description
+     *  默认全局texture便宜，第0个texture填充占位，作为默认的纹理不参与逻辑运算
+     */
+    static TexutreCursorOffset = 1;
+
+    /**
+     * @description
      *  hdmf descriptor cursor.
      */
     private sceneDescCursor_: number = 0;
@@ -271,7 +277,7 @@ type HDMFQueueGroup = {
     /**
      * @description
      */
-    indicesQueue_: IndicesDesc[];
+    fallbackIndicesQueue_: IndicesDesc[];
 
     /**
      * @description
@@ -298,7 +304,7 @@ const initQueueGroup = (): HDMFQueueGroup => {
         textureQueue_: [],
         vertexQueue_: [],
         meshletIndicesQueue_: [],
-        indicesQueue_: [],
+        fallbackIndicesQueue_: [],
         samplerQueue_: [],
         instanceMeshletMapQueue_: [],
         indexedIndirectQueue_: [],
@@ -1159,7 +1165,7 @@ class HDMFComponent extends BaseComponent {
                     indices_data: mesh.indices,
                     rt_indices_offset: mesh.rt_indices_offset,
                 };
-                this.group_.indicesQueue_.push(q);
+                this.group_.fallbackIndicesQueue_.push(q);
             }
             // assign sync flag to false.
             mesh.needSync = false;
@@ -1216,6 +1222,11 @@ class HDMFComponent extends BaseComponent {
      * - 另组织instance数据
      */
     private refreshMemory = (cursor: HDMFMemoryCursor): void => {
+        // shared sampler. sampler cusror keeps 0.
+        let samplerCursor = 0;
+        for (const [_k, v] of HDMFComponent.SharedSamplerDataMap) {
+            v.rt_sampler_idx = samplerCursor++;
+        }
         // texture runtime index.
         let textureCursor = cursor.TextureCursor;
         for (const [_k, texture] of this.textureDataMap_) {
@@ -1236,9 +1247,11 @@ class HDMFComponent extends BaseComponent {
             // assign mesh index.
             mesh.rt_mesh_idx = meshCursor++;
             // assign mesh vertex global offset.
-            vertexCursor += mesh.vertex_count;
+            // vertex cursor update, step with vertex count offset.
             mesh.rt_vertex_offset = vertexCursor;
-            // assign meshlet global offset
+            vertexCursor += mesh.vertex_count;
+            // mesh children meshlet runtime offset.
+            mesh.rt_meshlet_offset = meshletCursor;
             mesh.meshlets.forEach(meshlet => {
                 meshletIndicesCursor += meshlet.index_count;
                 meshlet.rt_index_offset = meshletIndicesCursor;
@@ -1246,7 +1259,7 @@ class HDMFComponent extends BaseComponent {
                 meshlet.rt_meshlet_idx = meshletCursor++;
             });
             // assign indices gloabl offset
-            mesh.rt_indices_offset += indicesCursor;
+            mesh.rt_indices_offset = indicesCursor;
             indicesCursor += mesh.indices.length;
         }
         // instance runtime index.

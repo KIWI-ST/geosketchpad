@@ -3,7 +3,6 @@ import type { Scene } from "../../scene/Scene";
 import { BaseSystem } from "../BaseSystem";
 import { HDMFComponent, HDMFMemoryCursor, initQueueGroup, type HDMFQueueGroup } from "../component/HDMFComponent";
 import type { BaseComponent } from "../BaseComponent";
-import type { Camera } from "@pipegpu/camera/src/camera/Camera";
 
 /**
  * @class HDMF, HardwareDenseMeshFriendly
@@ -62,17 +61,6 @@ class HDMFSystem extends BaseSystem {
 
     /**
      * @description
-     *  分配/更新 共享内存数据和运行时索引
-     */
-    private refreshSharedMemory = () => {
-        let samplerCursor = 0;
-        for (const [_k, v] of HDMFComponent.SharedSamplerDataMap) {
-            v.rt_sampler_idx = samplerCursor++;
-        }
-    }
-
-    /**
-     * @description
      *  refresh 
      *  - block update.
      * - 每帧读取所有component数据
@@ -109,6 +97,7 @@ class HDMFSystem extends BaseSystem {
         // update alloacted map
         // cursor for hdmf allocated.
         const globalCur: HDMFMemoryCursor = new HDMFMemoryCursor();
+        globalCur.TextureCursor = HDMFMemoryCursor.TexutreCursorOffset;
         for (const [_k, v] of this.allocatedMap_) {
             // copy cursor.
             const copyedCur = new HDMFMemoryCursor();
@@ -120,8 +109,6 @@ class HDMFSystem extends BaseSystem {
         }
         // statc cursor
         this.statsCur_.copy(globalCur);
-        // update shared memory, static cached in HDMFComponent.
-        this.refreshSharedMemory();
         return true;
     }
 
@@ -138,7 +125,7 @@ class HDMFSystem extends BaseSystem {
         this.group_.textureQueue_.push(...component.Group.textureQueue_.splice(0));
         this.group_.vertexQueue_.push(...component.Group.vertexQueue_.splice(0));
         this.group_.meshletIndicesQueue_.push(...component.Group.meshletIndicesQueue_.splice(0));
-        this.group_.indicesQueue_.push(...component.Group.indicesQueue_.splice(0));
+        this.group_.fallbackIndicesQueue_.push(...component.Group.fallbackIndicesQueue_.splice(0));
         this.group_.samplerQueue_.push(...component.Group.samplerQueue_.splice(0));
         this.group_.instanceMeshletMapQueue_.push(...component.Group.instanceMeshletMapQueue_.splice(0));
     }

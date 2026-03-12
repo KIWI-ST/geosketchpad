@@ -50,7 +50,7 @@ class CartoTransformComponent extends BaseComponent {
      *  (1114m, 2123m, 566m)
      */
     public get PositionWS(): Vec3d {
-        return this.ellipsoid_.cartoPosition2wsPostion(this.positionCarto_);
+        return this.ellipsoid_.positionCT2postionWS(this.positionCarto_);
     }
 
     public override async enable(b: boolean): Promise<void> {
