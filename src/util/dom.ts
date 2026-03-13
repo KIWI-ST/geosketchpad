@@ -1,6 +1,6 @@
 import { split } from './split';
 import { browser } from './browser';
-import { vec2, type Vec2 } from 'wgpu-matrix';
+import { vec2, vec2d, type Vec2, type Vec2d } from 'wgpu-matrix';
 
 const _PREFIX_ = '_geosketchpad_';
 
@@ -92,10 +92,75 @@ const getContainerPosition = (e: MouseEvent | TouchEvent, dom: HTMLCanvasElement
         (targetEvent.clientX - position[0] - dom.clientLeft) / position[2],
         (targetEvent.clientY - position[1] - dom.clientTop) / position[3]
     );
+};
+
+/**
+ * 
+ * @param e 
+ * @param dom 
+ * @returns 
+ */
+const getContainerPositionNDC2 = (clientXInContainer: Vec2d, dom: HTMLCanvasElement | HTMLDivElement): Vec2d => {
+    // 3. 计算容器的实际可绘制区域尺寸（排除padding/border）
+    const containerWidth = dom.clientWidth; // 内容宽度（不含border，含padding）
+    const containerHeight = dom.clientHeight; // 内容高度
+    if (containerWidth === 0 || containerHeight === 0) {
+        return vec2d.create(0, 0); // 避免除以0
+    }
+    // 5. 转换为[0,1]范围的归一化坐标（容器内相对比例）
+    const xNormalized = clientXInContainer[0] / containerWidth;
+    const yNormalized = clientXInContainer[1] / containerHeight;
+    // 6. 转换为NDC坐标（核心步骤）
+    // - X轴：[0,1] → [-1,1]
+    // - Y轴：[0,1] → [1,-1]（翻转Y轴，符合WebGPU/OpenGL规范）
+    const ndcX = xNormalized * 2 - 1;
+    const ndcY = 1 - yNormalized * 2;
+    return vec2d.create(ndcX, ndcY);
+}
+
+/**
+ * @description
+ * @param e 
+ * @param dom 
+ * @returns 
+ */
+const getContainerPositionNDC = (e: MouseEvent | TouchEvent, dom: HTMLCanvasElement | HTMLDivElement): Vec2d => {
+    // 1. 兼容鼠标/触摸事件，获取目标事件的clientXY
+    const targetEvent = e instanceof MouseEvent ? e : e.touches[0];
+    if (!targetEvent) {
+        return vec2d.create(0, 0); // 异常兜底
+    }
+    // 2. 获取容器的布局信息（解决padding/边框/缩放问题）
+    const style = window.getComputedStyle(dom);
+    const paddingLeft = parseInt(style.paddingLeft) || 0;
+    const paddingTop = parseInt(style.paddingTop) || 0;
+    const borderLeft = parseInt(style.borderLeftWidth) || 0;
+    const borderTop = parseInt(style.borderTopWidth) || 0;
+    const rect = dom.getBoundingClientRect(); // 容器在视口的绝对位置
+    // 3. 计算容器的实际可绘制区域尺寸（排除padding/border）
+    const containerWidth = dom.clientWidth; // 内容宽度（不含border，含padding）
+    const containerHeight = dom.clientHeight; // 内容高度
+    if (containerWidth === 0 || containerHeight === 0) {
+        return vec2d.create(0, 0); // 避免除以0
+    }
+    // 4. 计算鼠标在容器内的相对坐标（原点：容器左上角，Y轴下正）
+    const clientXInContainer = targetEvent.clientX - rect.left - paddingLeft - borderLeft;
+    const clientYInContainer = targetEvent.clientY - rect.top - paddingTop - borderTop;
+    // 5. 转换为[0,1]范围的归一化坐标（容器内相对比例）
+    const xNormalized = clientXInContainer / containerWidth;
+    const yNormalized = clientYInContainer / containerHeight;
+    // 6. 转换为NDC坐标（核心步骤）
+    // - X轴：[0,1] → [-1,1]
+    // - Y轴：[0,1] → [1,-1]（翻转Y轴，符合WebGPU/OpenGL规范）
+    const ndcX = xNormalized * 2 - 1;
+    const ndcY = 1 - yNormalized * 2;
+    return vec2d.create(ndcX, ndcY);
 }
 
 export {
     getContainerPosition,
+    getContainerPositionNDC,
+    getContainerPositionNDC2,
     addDOMEvent,
     removeDOMEvent,
     preventDefault,

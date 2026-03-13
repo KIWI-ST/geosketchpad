@@ -21,16 +21,15 @@ import { HDMFComponent } from "./src/ecs/component/HDMFComponent";
     });
     await scene.init();
 
-    // const lng: number = 116.397128;
-    // const lat: number = 39.917527;
-    // const alt: number = 1000;
-    const camera = new PerspectiveCamera(60.0, W, H, 0.1, 10000000000.0, false);
-    camera.Position = vec3d.create(-2178205.929902805, 4388519.719950141, 4071608.1284322627);
-
     // camera entity
     const cameraEntity = scene.createEntity();
     {
-        const cameraComponent: OrbitCameraComponent = new OrbitCameraComponent(camera);
+        // const lng: number = 116.397128;
+        // const lat: number = 39.917527;
+        // const alt: number = 1000;
+        const camera = new PerspectiveCamera(60.0, W, H, 0.1, 10000000000.0, false);
+        camera.Position = vec3d.create(-2178205.929902805, 4388519.719950141, 4071608.1284322627);
+        const cameraComponent: OrbitCameraComponent = new OrbitCameraComponent(camera, WGS84);
         cameraComponent.IsMainCamera = true;
         await cameraComponent.enable(true);
         scene.setComponent(cameraEntity, cameraComponent);

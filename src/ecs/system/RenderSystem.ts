@@ -21,6 +21,7 @@ import {
     type RenderHolderDesc,
     Attributes,
     BaseHolder,
+    ComputeHolder,
     IndexedIndirectBuffer,
     IndexedStorageBuffer,
     IndirectBuffer,
@@ -208,6 +209,8 @@ class RenderSystem extends BaseSystem {
      * @description
      */
     private debugMeshletHolder_?: RenderHolder;
+
+    private cullingHolder_?: ComputeHolder;
 
     /**
      * @description
@@ -528,8 +531,8 @@ class RenderSystem extends BaseSystem {
                         rt_scene_idx: new Uint32Array(buf, 68, 1),
                         rt_instance_idx: new Uint32Array(buf, 72, 1),
                     };
-                    // views.model.set(mat4d.scale(q.model, vec3d.create(100, 100, 100)));
-                    views.model.set(q.model);
+                    views.model.set(mat4d.scale(q.model, vec3d.create(100, 100, 100)));
+                    // views.model.set(q.model);
                     views.rt_mesh_idx.set([q.rt_mesh_idx]);
                     views.rt_scene_idx.set([q.rt_scene_idx]);
                     views.rt_instance_idx.set([q.rt_instance_idx]);
@@ -992,7 +995,7 @@ class RenderSystem extends BaseSystem {
      * @description
      *  主管线
      */
-    private buildRenderGraph = async () => {
+    private buildDeffredRenderGraph = async () => {
         // 使用debug meshlet vis component调试基础效果.
         const { compiler, context, colorAttachment, depthStencilAttachment } = this.scene_._state_renderer_;
         const { vertexSnippet, vertexBuffer } = this.res_.VertexBuffer!;
@@ -1059,6 +1062,10 @@ class RenderSystem extends BaseSystem {
             holders.push(this.debugMeshletHolder_);
         }
         this.frameGraph_.append(holders);
+
+
+
+
         await this.frameGraph_.build();
     }
 
@@ -1084,7 +1091,7 @@ class RenderSystem extends BaseSystem {
             // 更新CPU-side内存分配, render graph资产注册、全局资产更新
             this.refreshBuffer(camera);
             // 更新绘制指令
-            await this.buildRenderGraph();
+            await this.buildDeffredRenderGraph();
         }
     }
 }

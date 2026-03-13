@@ -1,7 +1,7 @@
 import { Scene } from './Scene';
-import { addDOMEvent, getContainerPosition, preventDefault } from '../util/dom';
+import { addDOMEvent, getContainerPosition, getContainerPositionNDC, getContainerPositionNDC2, preventDefault } from '../util/dom';
 import { DOMBus } from '../bus/DOMBus';
-import { vec2, type Vec2 } from 'wgpu-matrix';
+import { vec2, vec2d, type Vec2, type Vec2d } from 'wgpu-matrix';
 
 /**
  * Interaction Types Supported by Browser Controls
@@ -52,6 +52,7 @@ declare module './Scene' {
             mouseOffsetX: number,
             mouseOffsetY: number,
             wheelDelta: number,
+            ndcXY: Vec2d,
             laskClick: {
                 t: number,
                 x: number,
@@ -86,6 +87,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
 
     if (e instanceof PointerEvent) {
         const xy: Vec2 = getContainerPosition(e, scene.canvas_);
+        const ndcXY: Vec2d = getContainerPositionNDC(e, scene.canvas_);
         if (e.type === 'pointerdown') {
             state.laskClick = {
                 t: performance.now(),
@@ -110,6 +112,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                             isMouseDown: state.isMouseDown,
                             isRightMouseDown: state.isRightMouseDown,
                             point: xy,
+                            pointNDC: ndcXY,
                             lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                             offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                             delta: state.wheelDelta,
@@ -126,6 +129,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                             isMouseDown: state.isMouseDown,
                             isRightMouseDown: state.isRightMouseDown,
                             point: xy,
+                            pointNDC: ndcXY,
                             lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                             offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                             delta: state.wheelDelta,
@@ -149,6 +153,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                             isMouseDown: state.isMouseDown,
                             isRightMouseDown: state.isRightMouseDown,
                             point: xy,
+                            pointNDC: ndcXY,
                             lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                             offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                             delta: state.wheelDelta,
@@ -179,6 +184,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                                     isMouseDown: state.isMouseDown,
                                     isRightMouseDown: state.isRightMouseDown,
                                     point: xy,
+                                    pointNDC: ndcXY,
                                     lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                                     offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                                     delta: state.wheelDelta,
@@ -194,6 +200,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                                     isMouseDown: state.isMouseDown,
                                     isRightMouseDown: state.isRightMouseDown,
                                     point: xy,
+                                    pointNDC: ndcXY,
                                     lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                                     offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                                     delta: state.wheelDelta,
@@ -214,6 +221,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                                 isMouseDown: state.isMouseDown,
                                 isRightMouseDown: state.isRightMouseDown,
                                 point: xy,
+                                pointNDC: ndcXY,
                                 lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                                 offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                                 delta: state.wheelDelta,
@@ -234,6 +242,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                                 isMouseDown: state.isMouseDown,
                                 isRightMouseDown: state.isRightMouseDown,
                                 point: xy,
+                                pointNDC: ndcXY,
                                 lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                                 offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                                 delta: state.wheelDelta,
@@ -261,6 +270,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                     isMouseDown: state.isMouseDown,
                     isRightMouseDown: state.isRightMouseDown,
                     point: xy,
+                    pointNDC: ndcXY,
                     lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                     offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                     delta: state.wheelDelta,
@@ -284,6 +294,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                     isMouseDown: state.isMouseDown,
                     isRightMouseDown: state.isRightMouseDown,
                     point: xy,
+                    pointNDC: ndcXY,
                     lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                     offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                     delta: state.wheelDelta,
@@ -305,6 +316,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                                 isMouseDown: state.isMouseDown,
                                 isRightMouseDown: state.isRightMouseDown,
                                 point: xy,
+                                pointNDC: ndcXY,
                                 lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                                 offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                                 delta: state.wheelDelta,
@@ -326,6 +338,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                                 isMouseDown: state.isMouseDown,
                                 isRightMouseDown: state.isRightMouseDown,
                                 point: xy,
+                                pointNDC: ndcXY,
                                 lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                                 offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                                 delta: state.wheelDelta,
@@ -342,6 +355,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
     else if (e instanceof WheelEvent) {
         preventDefault(e);
         const xy: Vec2 = getContainerPosition(e, this.canvas_);
+        const ndcXY: Vec2d = getContainerPositionNDC(e, this.canvas_);
         state.mouseLastX = state.mouseX;
         state.mouseLastY = state.mouseY;
         state.mouseX = xy[0];
@@ -360,6 +374,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                 isMouseDown: state.isMouseDown,
                 isRightMouseDown: state.isRightMouseDown,
                 point: xy,
+                pointNDC: ndcXY,
                 lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                 offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                 delta: state.wheelDelta,
@@ -380,6 +395,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                     isMouseDown: state.isMouseDown,
                     isRightMouseDown: state.isRightMouseDown,
                     point: vec2.create(state.mouseX, state.mouseY),
+                    pointNDC: getContainerPositionNDC2(vec2d.create(state.mouseX, state.mouseY), scene.canvas_),
                     lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                     offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                     delta: state.wheelDelta,
@@ -403,6 +419,7 @@ Scene.prototype.handleDOMEvent = function (e: MouseEvent | PointerEvent | WheelE
                     isMouseDown: state.isMouseDown,
                     isRightMouseDown: state.isRightMouseDown,
                     point: vec2.create(state.mouseX, state.mouseY),
+                    pointNDC: getContainerPositionNDC2(vec2d.create(state.mouseX, state.mouseY), scene.canvas_),
                     lastPoint: vec2.create(state.mouseLastX, state.mouseLastY),
                     offsetPoint: vec2.create(state.mouseOffsetX, state.mouseOffsetY),
                     delta: state.wheelDelta,
@@ -433,6 +450,7 @@ Scene.registerHook(
             mouseOffsetX: 0,
             mouseOffsetY: 0,
             wheelDelta: 0,
+            ndcXY: vec2d.create(0.0, 0.0),
             laskClick: {
                 t: 0,
                 x: 0,

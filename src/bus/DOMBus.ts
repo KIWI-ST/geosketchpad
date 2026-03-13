@@ -1,4 +1,4 @@
-import type { Vec2 } from "wgpu-matrix";
+import type { Vec2, Vec2d } from "wgpu-matrix";
 import { BaseEventBus, type EventCallback } from "./BaseEventBus";
 
 /**
@@ -12,6 +12,7 @@ type DOMBusContext = {
     keyStatus: { [key: string]: boolean };
     mouseStatus: { [key: number]: boolean };
     point: Vec2;
+    pointNDC: Vec2d;
     lastPoint: Vec2;
     offsetPoint: Vec2;
     delta: number,
